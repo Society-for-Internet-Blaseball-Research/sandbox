@@ -3,7 +3,7 @@ use sandbox::{
     entities::{Player, Team, World},
     mods::Mods,
     rng::Rng,
-    Game, GameTeam, EventData,
+    Game, GameTeam, sim::{Sim, Event},
 };
 use uuid::Uuid;
 
@@ -16,7 +16,7 @@ fn main() {
 
     let mut game = Game {
         weather: sandbox::Weather::Sun2,
-        top: false,
+        top: true,
         inning: 1,
         home_team: GameTeam {
             id: team_a,
@@ -39,9 +39,14 @@ fn main() {
     };
 
     loop {
-        let evt = game.tick(&mut rng, &mut world);
-        if let EventData::GameEnd { winner } = evt {
-            println!("game over! winner is {}", winner);
+        let mut sim = Sim::new(&mut world, &mut rng);
+        let evt = sim.next(&game);
+
+        // keeping sim outside the loop means it borrows world and we can't pass it as mut here, which might be fine...?
+        evt.apply(&mut game, &mut world);
+
+        if let Event::GameOver = evt {
+            println!("game over!");
             break;
         }
 
