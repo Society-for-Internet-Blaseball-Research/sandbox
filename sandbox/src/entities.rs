@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, f64::consts::PI};
 
 use uuid::Uuid;
 
@@ -35,6 +35,38 @@ impl World {
     }
 }
 
+// use this for like multiplier calc or something
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlayerAttr {
+    Buoyancy,
+    Divinity,
+    Martyrdom,
+    Moxie,
+    Musclitude,
+    Patheticism,
+    Thwackability,
+    Tragicness,
+    Coldness,
+    Overpowerment,
+    Ruthlessness,
+    Shakespearianism,
+    Suppression,
+    Unthwackability,
+    BaseThirst,
+    Continuation,
+    GroundFriction,
+    Indulgence,
+    Laserlikeness,
+    Anticapitalism,
+    Chasiness,
+    Omniscience,
+    Tenaciousness,
+    Watchfulness,
+    Pressurization,
+    Cinnamon,
+}
+
 #[derive(Clone, Debug)]
 pub struct Player {
     pub id: Uuid,
@@ -69,6 +101,18 @@ pub struct Player {
     pub omniscience: f64,
     pub tenaciousness: f64,
     pub watchfulness: f64,
+
+    pub pressurization: f64,
+    pub cinnamon: f64,
+}
+
+impl Player {
+    pub fn vibes(&self, day: usize) -> f64 {
+        let frequency = 6.0 + (10.0 * self.buoyancy).round();
+        // todo: sin table? do we care that much?
+        let sin_phase = PI * ((2.0 / frequency) * (day as f64) + 0.5);
+        0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
+    }
 }
 
 #[derive(Clone, Debug)]

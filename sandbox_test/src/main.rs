@@ -3,7 +3,8 @@ use sandbox::{
     entities::{Player, Team, World},
     mods::Mods,
     rng::Rng,
-    Game, GameTeam, sim::{Sim, Event},
+    sim::{Event, Sim},
+    Game, GameTeam,
 };
 use uuid::Uuid;
 
@@ -136,6 +137,8 @@ fn gen_player(world: &mut World, rng: &mut Rng) -> Uuid {
         omniscience: rng.next(),
         tenaciousness: rng.next(),
         watchfulness: rng.next(),
+        pressurization: rng.next(),
+        cinnamon: rng.next(),
     };
     world.insert_player(player);
     id

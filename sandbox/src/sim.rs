@@ -129,7 +129,8 @@ impl Event {
             } => {
                 game.runners = runners_after.clone();
                 game.base_sweep();
-                game.runners.add(bases - 1, game.batting_team().batter.unwrap());
+                game.runners
+                    .add(bases - 1, game.batting_team().batter.unwrap());
                 end_pa(game);
             }
             Event::GroundOut {
@@ -328,13 +329,15 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         return PitchOutcome::HomeRun;
     }
 
+    let hit_defender_id = game.pick_fielder(world, rng.next());
+    let hit_defender = world.player(hit_defender_id);
     let double_roll = rng.next();
     let triple_roll = rng.next();
 
-    if triple_roll < formulas::triple_threshold(pitcher, batter) {
+    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender) {
         return PitchOutcome::Triple;
     }
-    if double_roll < formulas::double_threshold(pitcher, batter) {
+    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender) {
         return PitchOutcome::Double;
     }
 
