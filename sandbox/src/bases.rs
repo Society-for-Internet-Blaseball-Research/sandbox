@@ -1,12 +1,24 @@
-use std::{iter::zip, borrow::Borrow};
+use std::{borrow::Borrow, iter::zip};
 
-use uuid::Uuid;
 use itertools::Itertools;
+use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Baserunner {
     pub id: Uuid,
     pub base: u8,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct BaserunnerRef<'a> {
+    pub id: &'a Uuid,
+    pub base: &'a u8,
+}
+
+#[derive(Debug)]
+pub struct BaserunnerRefMut<'a> {
+    pub id: &'a mut Uuid,
+    pub base: &'a mut u8,
 }
 
 /// Stores where all the baserunners are
@@ -22,6 +34,11 @@ impl Baserunners {
             ids: Vec::new(),
             bases: Vec::new(),
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.bases.clear();
+        self.ids.clear();
     }
 
     pub fn occupied(&self, base: u8) -> bool {
@@ -68,48 +85,38 @@ impl Baserunners {
     }
 
     pub fn walk(&mut self) {
-        let sorted = self.iter_mut().sorted_by(|a, b| Ord::cmp(a.1, b.1));
+        // TODO: This code is even worse somehow
+        let sorted = self.bases.iter().sorted_by(|a, b| Ord::cmp(a, b));
         let mut index = 0;
-        for i in sorted {
-            if *i.base == index {
+        for &i in sorted {
+            if i == index {
                 index += 1;
             }
         }
-        // todo: this code is also crap
-        let mut num_occupied = 0;
-        for i in 0..5 {
-            if self.occupied(i) {
-                num_occupied += 1;
-            } else {
-                break;
-            }
-        }
 
-        for i in (0..num_occupied).rev() {
+        for i in (0..index).rev() {
             self.advance(i);
         }
     }
 
-    pub fn advance_if(&mut self, mut f: impl FnMut((&)) -> bool) {
-        for i in 0..self.runners.len() {
-            if self.can_advance(self.runners[i].base) {
-                if f(&self.runners[i]) {
-                    self.runners[i].base += 1;
-                }
+    pub fn advance_if(&mut self, mut f: impl FnMut(&Baserunner) -> bool) {
+        for i in self.iter() {
+            if (self.can_advance(i.base) && f(i)) {
+                self.advance(i.base);
             }
         }
     }
 
-    pub fn add(&mut self, base: u8, id: Uuid) {
-        self.ids.push(id);
-        self.bases.push(base);
+    pub fn push(&mut self, runner: Baserunner) {
+        self.ids.push(runner.id);
+        self.bases.push(runner.base);
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &Baserunner> {
-        zip(self.ids.iter(), self.bases.iter()).map(|x| Baserunner{id: x.0, base: x.1})
+    pub fn iter(&self) -> impl Iterator<Item = BaserunnerRef> {
+        zip(self.ids.iter(), self.bases.iter()).map(|x| BaserunnerRef { id: x.0, base: x.1 })
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Baserunner> {
-        zip(self.ids.iter_mut(), self.bases.iter_mut()).map(|x| Baserunner{id: x.0, base: x.1})
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = BaserunnerRefMut> {
+        zip(self.ids.iter_mut(), self.bases.iter_mut()).map(|x| BaserunnerRefMut { id: x.0, base: x.1 })
     }
 }
