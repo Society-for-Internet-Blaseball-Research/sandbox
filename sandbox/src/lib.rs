@@ -49,7 +49,10 @@ impl Game {
         for runner in self.runners.iter() {
             // todo: baserunner code is bad
             if runner.base < 3 {
-                new_runners.add(runner.base, runner.id);
+                new_runners.push(bases::Baserunner {
+                    id: runner.id,
+                    base: runner.base,
+                });
             } else {
                 let batting_team = if self.top {
                     &mut self.away_team

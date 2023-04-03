@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use uuid::Uuid;
 
 use crate::{bases::Baserunners, entities::World, formulas, mods::Mod, rng::Rng, Game};
@@ -115,7 +116,7 @@ impl Event {
             }
             Event::Walk => {
                 // maybe we should put batter in the event
-                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.runners.add(game.batting_team().batter.unwrap(), 0);
                 end_pa(game);
             }
             Event::HomeRun => {
@@ -130,7 +131,7 @@ impl Event {
                 game.runners = runners_after.clone();
                 game.base_sweep();
                 game.runners
-                    .add(bases - 1, game.batting_team().batter.unwrap());
+                    .add(game.batting_team().batter.unwrap(), bases - 1);
                 end_pa(game);
             }
             Event::GroundOut {
@@ -392,28 +393,28 @@ impl Plugin for StealingPlugin {
         let steal_defender = world.player(steal_defender_id);
 
         // todo: can we refactor `Baserunners` in a way where this sort of iteration is more natural
-        for base in (0..4).rev() {
-            if let Some(runner_id) = game.runners.at(base) {
-                if game.runners.can_advance(base) {
-                    let runner = world.player(runner_id);
-                    let should_attempt =
-                        rng.next() < formulas::steal_attempt_threshold(runner, steal_defender);
-                    if should_attempt {
-                        let success =
-                            rng.next() < formulas::steal_success_threshold(runner, steal_defender);
+        // The unique_by is to reproduce the behavior of only checking the first player on a base
+        // in astrid's code
+        for base in game.runners.iter().unique_by(|r| r.base) {
+            if game.runners.can_advance(base.base) {
+                let runner = world.player(base.id);
+                let should_attempt =
+                    rng.next() < formulas::steal_attempt_threshold(runner, steal_defender);
+                if should_attempt {
+                    let success =
+                        rng.next() < formulas::steal_success_threshold(runner, steal_defender);
 
-                        if success {
-                            return Some(Event::BaseSteal {
-                                runner: runner_id,
-                                base_from: base,
-                                base_to: base + 1,
-                            });
-                        } else {
-                            return Some(Event::CaughtStealing {
-                                runner: runner_id,
-                                base_from: base,
-                            });
-                        }
+                    if success {
+                        return Some(Event::BaseSteal {
+                            runner: base.id,
+                            base_from: base.base,
+                            base_to: base.base + 1,
+                        });
+                    } else {
+                        return Some(Event::CaughtStealing {
+                            runner: base.id,
+                            base_from: base.base,
+                        });
                     }
                 }
             }
