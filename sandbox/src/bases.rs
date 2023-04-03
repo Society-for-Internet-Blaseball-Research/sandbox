@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, iter::zip};
+use std::iter::zip;
 
 use itertools::Itertools;
 use uuid::Uuid;
@@ -117,6 +117,7 @@ impl Baserunners {
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = BaserunnerRefMut> {
-        zip(self.ids.iter_mut(), self.bases.iter_mut()).map(|x| BaserunnerRefMut { id: x.0, base: x.1 })
+        zip(self.ids.iter_mut(), self.bases.iter_mut())
+            .map(|x| BaserunnerRefMut { id: x.0, base: x.1 })
     }
 }
