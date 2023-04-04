@@ -56,6 +56,7 @@ impl Baserunners {
         for r in self.runners.iter_mut() {
             if r.base == base {
                 r.base += 1;
+                return;
             }
         }
     }
