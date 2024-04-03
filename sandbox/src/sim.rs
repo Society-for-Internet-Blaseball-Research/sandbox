@@ -306,7 +306,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let out_defender_id = game.pick_fielder(world, rng.next());
     let out_defender = world.player(out_defender_id);
 
-    let is_out = rng.next() < formulas::out_threshold(pitcher, batter, out_defender);
+    let is_out = rng.next() > formulas::out_threshold(pitcher, batter, out_defender);
     if is_out {
         let fly_defender_id = game.pick_fielder(world, rng.next());
         let fly_defender = world.player(out_defender_id);
