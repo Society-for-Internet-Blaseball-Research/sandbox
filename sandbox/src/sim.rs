@@ -122,6 +122,7 @@ impl Event {
             Event::HomeRun => {
                 game.runners.advance_all(4);
                 game.base_sweep();
+                game.batting_team_mut().score += 1.0; //lazy workaround to score the home run hitter
                 end_pa(game);
             }
             Event::BaseHit {
