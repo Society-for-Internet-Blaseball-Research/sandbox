@@ -97,6 +97,7 @@ impl Event {
                 game.outs = 0;
                 game.balls = 0;
                 game.strikes = 0;
+                game.runners = Baserunners::new();
             }
             Event::GameOver => {}
             Event::Ball => {
