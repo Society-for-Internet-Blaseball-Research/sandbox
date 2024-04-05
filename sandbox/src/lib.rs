@@ -56,7 +56,9 @@ impl Game {
                 } else {
                     &mut self.home_team
                 };
-                batting_team.score += 1.0;
+                if self.outs < 3 {
+                    batting_team.score += 1.0;
+                }
             }
         }
         self.runners = new_runners;

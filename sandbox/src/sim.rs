@@ -116,6 +116,7 @@ impl Event {
             }
             Event::Walk => {
                 // maybe we should put batter in the event
+                game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
                 end_pa(game);
             }
@@ -139,6 +140,7 @@ impl Event {
                 fielder: _fielder,
                 ref runners_after,
             } => {
+                //todo: runner advancement
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.base_sweep();
@@ -229,13 +231,23 @@ impl Plugin for BasePlugin {
                 }
             }
             PitchOutcome::Foul => Event::Foul,
-            PitchOutcome::GroundOut { fielder } => Event::GroundOut {
-                fielder,
-                runners_after: game.runners.clone(),
+            //groundouts might have a higher advancement rate than flyouts
+            //or they might not
+            PitchOutcome::GroundOut { fielder } => {
+                let mut new_runners = game.runners.clone();
+                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                Event::GroundOut {
+                    fielder,
+                    runners_after: new_runners,
+                }
             },
-            PitchOutcome::Flyout { fielder } => Event::Flyout {
-                fielder,
-                runners_after: game.runners.clone(),
+            PitchOutcome::Flyout { fielder } => {
+                let mut new_runners = game.runners.clone();
+                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                Event::Flyout {
+                    fielder,
+                    runners_after: new_runners,
+                }
             },
             PitchOutcome::HomeRun => Event::HomeRun,
 
@@ -244,7 +256,7 @@ impl Plugin for BasePlugin {
             PitchOutcome::Triple => {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(3);
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|_runner| rng.next() < 0.5); //is this at all useful?
                 Event::BaseHit {
                     bases: 3,
                     runners_after: new_runners,
