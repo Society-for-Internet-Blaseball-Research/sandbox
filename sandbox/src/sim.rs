@@ -380,8 +380,14 @@ impl Plugin for InningStatePlugin {
             return None;
         }
 
-        let tied = (game.away_team.score - game.home_team.score).abs() < 0.01; // lol floats
-        if game.inning >= 9 && !tied {
+        let lead = if (game.away_team.score - game.home_team.score).abs() < 0.01 {
+            0
+        } else if game.away_team.score > game.home_team.score {
+            1
+        } else {
+            -1
+        }; // lol floats
+        if game.inning >= 9 && (lead == -1 || !game.top && lead == 1) {
             return Some(Event::GameOver);
         }
 
