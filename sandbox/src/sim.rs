@@ -190,12 +190,18 @@ enum PitchOutcome {
     StrikeSwinging,
     StrikeLooking,
     Foul,
-    GroundOut { fielder: Uuid },
-    Flyout { fielder: Uuid },
+    GroundOut {
+        fielder: Uuid,
+        advancing_runners: Vec<Uuid>
+    },
+    Flyout { 
+        fielder: Uuid,
+        advancing_runners: Vec<Uuid>
+    },
     HomeRun,
-    Triple,
-    Double,
-    Single,
+    Triple { advancing_runners: Vec<Uuid> },
+    Double { advancing_runners: Vec<Uuid> },
+    Single { advancing_runners: Vec<Uuid> },
     // todo: dp/fc
 }
 
@@ -233,17 +239,17 @@ impl Plugin for BasePlugin {
             PitchOutcome::Foul => Event::Foul,
             //groundouts might have a higher advancement rate than flyouts
             //or they might not
-            PitchOutcome::GroundOut { fielder } => {
+            PitchOutcome::GroundOut { fielder, advancing_runners } => {
                 let mut new_runners = game.runners.clone();
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::GroundOut {
                     fielder,
                     runners_after: new_runners,
                 }
             },
-            PitchOutcome::Flyout { fielder } => {
+            PitchOutcome::Flyout { fielder, advancing_runners } => {
                 let mut new_runners = game.runners.clone();
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::Flyout {
                     fielder,
                     runners_after: new_runners,
@@ -253,30 +259,30 @@ impl Plugin for BasePlugin {
 
             // todo: there may be a subtle bug here since we don't sweep the runners after the forced advance
             // runner [1, 0], double, then we're at [3, 2], 3 *should* get swept and *then* 2 should get to advance to 3...
-            PitchOutcome::Triple => {
+            PitchOutcome::Triple { advancing_runners }=> {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(3);
-                new_runners.advance_if(|_runner| rng.next() < 0.5); //is this at all useful?
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::BaseHit {
                     bases: 3,
                     runners_after: new_runners,
                 }
             }
 
-            PitchOutcome::Double => {
+            PitchOutcome::Double { advancing_runners } => {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(2);
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::BaseHit {
                     bases: 2,
                     runners_after: new_runners,
                 }
             }
 
-            PitchOutcome::Single => {
+            PitchOutcome::Single { advancing_runners } => {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(1);
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::BaseHit {
                     bases: 1,
                     runners_after: new_runners,
@@ -323,18 +329,38 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let is_out = rng.next() > formulas::out_threshold(pitcher, batter, out_defender);
     if is_out {
         let fly_defender_id = game.pick_fielder(world, rng.next());
-        let fly_defender = world.player(out_defender_id);
+        let fly_defender = world.player(out_defender_id); //is bug?
 
         let is_fly = rng.next() < formulas::fly_threshold(fly_defender);
         if is_fly {
+            let mut advancing_runners = Vec::new();
+            for baserunner in game.runners.iter() {
+                let base_from = baserunner.base;
+                let runner_id = baserunner.id;
+                let runner = world.player(runner_id);
+
+                if rng.next() < formulas::flyout_advancement_threshold(runner, base_from) {
+                    advancing_runners.push(runner_id);
+                }
+            }
             return PitchOutcome::Flyout {
                 fielder: fly_defender_id,
+                advancing_runners
             };
         }
 
         let ground_defender_id = game.pick_fielder(world, rng.next());
+        let mut advancing_runners = Vec::new();
+        for baserunner in game.runners.iter() {
+            let runner_id = baserunner.id;
+            let runner = world.player(runner_id);
+            if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender) {
+                advancing_runners.push(runner_id);
+            }
+        }
         return PitchOutcome::GroundOut {
             fielder: ground_defender_id,
+            advancing_runners
         };
     }
 
@@ -348,14 +374,30 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let double_roll = rng.next();
     let triple_roll = rng.next();
 
-    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender) {
-        return PitchOutcome::Triple;
-    }
-    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender) {
-        return PitchOutcome::Double;
+    let mut advancing_runners = Vec::new();
+    for baserunner in game.runners.iter() {
+        let runner_id = baserunner.id;
+        let runner = world.player(runner_id);
+
+        if rng.next() < formulas::hit_advancement_threshold(runner, hit_defender) {
+            advancing_runners.push(runner_id);
+        }
     }
 
-    PitchOutcome::Single
+    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender) {
+        return PitchOutcome::Triple {
+            advancing_runners
+        };
+    }
+    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender) {
+        return PitchOutcome::Double {
+            advancing_runners
+        };
+    }
+
+    PitchOutcome::Single {
+        advancing_runners
+    }
 }
 
 struct BatterStatePlugin;
