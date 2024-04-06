@@ -143,3 +143,56 @@ pub fn steal_attempt_threshold(_runner: &Player, _defender: &Player) -> f64 {
 pub fn steal_success_threshold(_runner: &Player, _defender: &Player) -> f64 {
     0.8
 }
+
+pub fn hit_advancement_threshold(runner: &Player, fielder: &Player) -> f64 {
+    let tenac = fielder.tenaciousness;
+    let cont = runner.continuation;
+
+    (0.7 - tenac + 0.6 * cont).min(0.95).max(0.01)
+}
+
+pub fn groundout_sacrifice_threshold(batter: &Player) -> f64 {
+    let mart = batter.martyrdom;
+
+    0.05 + 0.25 * mart
+}
+
+pub fn groundout_advancement_threshold(runner: &Player, fielder: &Player) -> f64 {
+    let indulg = runner.indulgence;
+    let tenac = fielder.tenaciousness;
+    let incon = 0.5;
+    let elong = 0.5;
+
+    0.5 + 0.35 * indulg - 0.15 * tenac - 0.15 * (incon - 0.5) - 0.15 * (elong - 0.5)
+}
+
+pub fn double_play_threshold(batter: &Player, pitcher: &Player, fielder: &Player) -> f64 {
+    let shakes = pitcher.shakespearianism;
+    let trag = batter.tragicness;
+    let tenac = fielder.tenaciousness;
+    let elong = 0.5;
+
+    (-0.05 + 0.4 * shakes - 0.18 * (1.0 - trag) + 0.1 * tenac - 0.16 * (elong - 0.5)).max(0.001)
+}
+
+pub fn flyout_advancement_threshold(runner: &Player, base_from: u8) -> f64 {
+    let indulg = runner.indulgence;
+    let elong = 0.0;
+    let incon = 0.0;
+    match base_from {
+        0 => {
+            let indulg_factor = 0.36 * indulg - 0.38 * indulg.powf(2.0) + 0.24 * indulg.powf(4.0);
+            return -0.085 + indulg_factor - 0.1 * elong - 0.1 * incon;
+        },
+        1 => {
+            let indulg_factor = 0.065 * indulg + 0.3 * indulg.powf(2.0);
+            return 0.045 + indulg_factor - 0.1 * elong - 0.1 * incon;
+        },
+        2 => {
+            return 0.45 + 0.35 * indulg - 0.1 * elong - 0.1 * incon;
+        }
+        _ => {
+            return 0.0; //lol
+        }
+    }
+}
