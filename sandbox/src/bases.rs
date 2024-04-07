@@ -90,8 +90,59 @@ impl Baserunners {
         }
     }
 
+    pub fn forced_advance_if(&mut self, mut f: impl FnMut(&Baserunner) -> bool) {
+        if self.occupied(0) && self.occupied(1) {
+            for runner in self.runners.iter_mut() {
+                runner.base += 1;
+            }
+        } else {
+            for i in 0..self.runners.len() {
+                if self.can_advance(self.runners[i].base) {
+                    if f(&self.runners[i]) {
+                        self.runners[i].base += 1;
+                    } else if self.runners[i].base == 0 {
+                        self.walk(); //this is a code crime
+                    }
+                }
+            }
+        }
+    }
+
     pub fn add(&mut self, base: u8, id: Uuid) {
         self.runners.push(Baserunner { id, base });
+    }
+
+    pub fn empty(&self) -> bool {
+        self.runners.len() == 0
+    }
+
+    pub fn pick_runner(&self, roll: f64) -> u8 {
+        //todo: maybe rewrite this to use an if
+        let len = self.runners.len();
+        match len {
+            0 => {
+                panic!("this shouldn't be called");
+            },
+            1 => {
+                return self.runners[0].base;
+            },
+            _ => {
+                let idx = (roll * (len as f64)).floor() as usize;
+                return self.runners[idx].base;
+            }
+        }
+    }
+
+    pub fn pick_runner_fc(&self) -> u8 {
+        if self.occupied(1) {
+            if self.occupied(2) {
+                return 2;
+            } else {
+                return 1;
+            }
+        } else {
+            return 0;
+        }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Baserunner> {
