@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, f64::consts::PI};
 
 use uuid::Uuid;
 
-use crate::mods::Mods;
+use crate::{mods::Mods, rng::Rng};
 
 pub struct World {
     pub players: BTreeMap<Uuid, Player>,
@@ -26,12 +26,86 @@ impl World {
         self.teams.get(&id).unwrap()
     }
 
+    pub fn player_mut(&mut self, id: Uuid) -> &mut Player {
+        self.players.get_mut(&id).unwrap()
+    }
+
+    pub fn team_mut(&mut self, id: Uuid) -> &mut Team {
+        self.teams.get_mut(&id).unwrap()
+    }
+
     pub fn insert_player(&mut self, player: Player) {
         self.players.insert(player.id, player);
     }
 
     pub fn insert_team(&mut self, team: Team) {
         self.teams.insert(team.id, team);
+    }
+
+    pub fn replace_player(&mut self, player_id: Uuid, new_player_id: Uuid) {
+        let player = self.player_mut(player_id);
+        let team_id = player.team.unwrap();
+        player.team = None;
+        let team = self.team_mut(team_id);
+        team.replace_player(player_id, new_player_id);
+    }
+
+    pub fn swap(&mut self, player1_id: Uuid, player2_id: Uuid) {
+        let team_id_1 = self.player(player1_id).team.unwrap();
+        let team_id_2 = self.player(player2_id).team.unwrap();
+        let player1 = self.player_mut(player1_id);
+        player1.team = Some(team_id_2);
+        let player2 = self.player_mut(player2_id);
+        player2.team = Some(team_id_1);
+        let team1 = self.team_mut(team_id_1);
+        team1.replace_player(player1_id, player2_id);
+        let team2 = self.team_mut(team_id_2);
+        team2.replace_player(player2_id, player1_id);
+    }
+
+    pub fn gen_team(&mut self, rng: &mut Rng, name: String, emoji: String) -> Uuid {
+        let id = Uuid::new_v4();
+        let mut team = Team {
+            id,
+            emoji,
+            lineup: Vec::new(),
+            rotation: Vec::new(),
+            shadows: Vec::new(),
+            name,
+            mods: Mods::new(),
+        };
+
+        for _ in 0..9 {
+            team.lineup.push(self.gen_player(rng, id));
+        }
+
+        for _ in 0..5 {
+            team.rotation.push(self.gen_player(rng, id));
+        }
+
+        for _ in 0..11 {
+            team.shadows.push(self.gen_player(rng, id));
+        }
+
+        self.insert_team(team);
+        id
+    }
+
+    pub fn gen_player(&mut self, rng: &mut Rng, team: Uuid) -> Uuid {
+        let mut player = Player::new(rng);
+        let id = player.id;
+        player.name = format!("Player {}", &(player.id).to_string()[..8]);
+        player.team = Some(team.clone());
+        self.insert_player(player);
+        id
+    }
+
+    pub fn add_rolled_player(&mut self, mut player: Player, team: Uuid) -> Uuid {
+        let id = player.id;
+        player.name = format!("Player {}", &(player.id).to_string()[..8]);
+        player.team = Some(team.clone());
+        self.insert_player(player);
+        id
     }
 }
 
@@ -72,8 +146,11 @@ pub struct Player {
     pub id: Uuid,
     pub name: String,
     pub mods: Mods,
+    pub team: Option<Uuid>, //ig
 
     // stats??
+    // todo: maybe represent stats with an array
+    // to make rolling new players less awkward
     pub buoyancy: f64,
     pub divinity: f64,
     pub martyrdom: f64,
@@ -107,6 +184,44 @@ pub struct Player {
 }
 
 impl Player {
+    pub fn new(rng: &mut Rng) -> Player {
+        let id = Uuid::new_v4();
+
+        Player {
+            id,
+            name: "".to_string(), //todo: name gen
+            mods: Mods::new(),
+            team: None,
+
+            // this is not rng order compatible
+            buoyancy: rng.next(),
+            divinity: rng.next(),
+            martyrdom: rng.next(),
+            moxie: rng.next(),
+            musclitude: rng.next(),
+            patheticism: rng.next(),
+            thwackability: rng.next(),
+            tragicness: rng.next(),
+            coldness: rng.next(),
+            overpowerment: rng.next(),
+            ruthlessness: rng.next(),
+            shakespearianism: rng.next(),
+            suppression: rng.next(),
+            unthwackability: rng.next(),
+            base_thirst: rng.next(),
+            continuation: rng.next(),
+            ground_friction: rng.next(),
+            indulgence: rng.next(),
+            laserlikeness: rng.next(),
+            anticapitalism: rng.next(),
+            chasiness: rng.next(),
+            omniscience: rng.next(),
+            tenaciousness: rng.next(),
+            watchfulness: rng.next(),
+            pressurization: rng.next(),
+            cinnamon: rng.next(),
+        }
+    }
     pub fn vibes(&self, day: usize) -> f64 {
         let frequency = 6.0 + (10.0 * self.buoyancy).round();
         // todo: sin table? do we care that much?
@@ -125,7 +240,162 @@ pub struct Team {
     pub rotation: Vec<Uuid>,
     pub shadows: Vec<Uuid>,
 
+    //pub lineup_mods: Vec<Vec<Mods>>
+    //pub rotation_mods: Vec<Vec<Mods>>
+    //idea
+
     pub mods: Mods,
+}
+
+impl Team {
+    fn replace_player(&mut self, id: Uuid, new_id: Uuid) {
+        let all_players = vec![&mut self.lineup, &mut self.rotation, &mut self.shadows];
+
+        //todo: write this code with return
+        let mut found = false;
+        for location in all_players {
+            let position = location.iter().position(|x| *x == id);
+            if let Some(idx) = position {
+                location[idx] = new_id;
+                found = true;
+                break;
+            }
+        }
+        
+        if !found {
+            panic!("player not found");
+        }
+    }
+
+    //if reverb type is 1 (partial), returns pairs of players to be swapped
+    //if not, returns indexes of slots (rotation lower if reverb type is 1, else lineup lower) in rotation-lineup order
+    pub fn roll_reverb_changes(&self, rng: &mut Rng, reverb_type: u8) -> Vec<usize> {
+        let mut reverb_changes = Vec::new();
+        let lineup_length = self.lineup.len();
+        let rotation_length = self.rotation.len();
+        let length = lineup_length + rotation_length;
+        match reverb_type {
+            0 => {
+                let mut players_rem: Vec<usize> = Vec::new(); //tracks players still unsorted
+                for i in 0..length {
+                    players_rem.push(i as usize);
+                }
+
+                for _ in 0..length {
+                    let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
+                    let idx = players_rem[rem_idx];
+                    players_rem.retain(|j| *j != idx);
+                    reverb_changes.push(idx);
+                }
+            },
+            1 => {
+                for _ in 0..3 {
+                    let idx1 = (rng.next() * (length as f64)).floor() as usize;
+                    let idx2 = (rng.next() * (length as f64)).floor() as usize;
+                    reverb_changes.push(idx1);
+                    reverb_changes.push(idx2);
+                }
+            },
+            2 => {
+                let mut players_rem: Vec<usize> = Vec::new();
+                for i in 0..lineup_length {
+                    players_rem.push(i as usize);
+                }
+
+                for _ in 0..lineup_length {
+                    let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
+                    let idx = players_rem[rem_idx];
+                    players_rem.retain(|j| *j != idx);
+                    reverb_changes.push(idx);
+                }
+            },
+            3 => {
+                let mut players_rem: Vec<usize> = Vec::new();
+                for i in 0..rotation_length {
+                    players_rem.push(i as usize);
+                }
+
+                for _ in 0..rotation_length {
+                    let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
+                    let idx = players_rem[rem_idx];
+                    players_rem.retain(|j| *j != idx);
+                    reverb_changes.push(idx);
+                }
+            },
+            _ => {
+                panic!("wrong reverb type");
+            }
+        }
+        reverb_changes
+    }
+
+    pub fn apply_reverb_changes(&mut self, reverb_type: u8, changes: &Vec<usize>) {
+        let mut result: Vec<Uuid> = Vec::new();
+        let lineup_length = self.lineup.len();
+        let rotation_length = self.rotation.len();
+        let length = lineup_length + rotation_length;
+        match reverb_type {
+            0 => {
+                for i in rotation_length..length {
+                    let player_slot = changes[i];
+                    if player_slot < lineup_length {
+                        result.push(self.lineup[changes[i]].clone());
+                    } else {
+                        result.push(self.rotation[changes[i] - lineup_length].clone());
+                    }
+                }
+                for i in 0..rotation_length {
+                    let player_slot = changes[i];
+                    if player_slot < lineup_length {
+                        result.push(self.lineup[changes[i]].clone());
+                    } else {
+                        result.push(self.rotation[changes[i] - lineup_length].clone());
+                    }
+                }
+            },
+            1 => {
+                for i in 0..lineup_length {
+                    result.push(self.lineup[i].clone());
+                }
+                for i in 0..rotation_length {
+                    result.push(self.rotation[i].clone());
+                }
+                let mut change_idx = 0;
+                while change_idx < changes.len() {
+                    let slot1 = changes[change_idx];
+                    let slot2 = changes[change_idx + 1];
+                    result.swap(slot1, slot2);
+                    change_idx += 2;
+                }
+            },
+            2 => {
+                for i in 0..lineup_length {
+                    result.push(self.lineup[changes[i]].clone());
+                }
+                for i in 0..rotation_length {
+                    result.push(self.rotation[i].clone());
+                }
+            },
+            3 => {
+                for i in 0..lineup_length {
+                    result.push(self.lineup[i].clone());
+                }
+                for i in 0..rotation_length {
+                    result.push(self.rotation[changes[i]].clone());
+                }
+            },
+            _ => {
+                panic!("wrong reverb type, somehow");
+            }
+        }
+        for i in 0..length {
+            if i < lineup_length {
+                self.lineup[i] = result[i];
+            } else {
+                self.rotation[i - lineup_length] = result[i];
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

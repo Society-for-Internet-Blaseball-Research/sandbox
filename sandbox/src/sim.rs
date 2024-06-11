@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{bases::Baserunners, entities::World, formulas, mods::Mod, rng::Rng, Game};
+use crate::{bases::Baserunners, entities::{World, Player}, formulas, mods::Mod, rng::Rng, Game, Weather};
 
 pub trait Plugin {
     fn tick(&self, _game: &Game, _world: &World, _rng: &mut Rng) -> Option<Event> {
@@ -22,6 +22,7 @@ impl<'a> Sim<'a> {
             plugins: vec![
                 Box::new(InningStatePlugin),
                 Box::new(BatterStatePlugin),
+                Box::new(WeatherPlugin),
                 Box::new(StealingPlugin),
                 Box::new(BasePlugin),
             ],
@@ -86,10 +87,35 @@ pub enum Event {
         runner: Uuid,
         base_from: u8,
     },
+
+    Incineration {
+        target: Uuid,
+        replacement: Player
+    },
+    Peanut {
+        target: Uuid,
+        yummy: bool
+    },
+    Feedback {
+        target1: Uuid,
+        target2: Uuid,
+    },
+    Reverb {
+        reverb_type: u8,
+        team: Uuid,
+        changes: Vec<usize>
+    },
+    Blooddrain {
+        drainer: Uuid,
+        target: Uuid,
+        stat: u8,
+        siphon: bool,
+        siphon_effect: i16
+    }
 }
 
 impl Event {
-    pub fn apply(&self, game: &mut Game, _world: &mut World) {
+    pub fn apply(&self, game: &mut Game, world: &mut World) {
         match *self {
             Event::BatterUp { batter } => {
                 let bt = game.batting_team_mut();
@@ -146,7 +172,6 @@ impl Event {
                 fielder: _fielder,
                 ref runners_after,
             } => {
-                //todo: runner advancement
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.base_sweep();
@@ -188,6 +213,153 @@ impl Event {
             } => {
                 game.runners.remove(base_from);
                 game.outs += 1;
+            },
+            Event::Incineration { target, ref replacement } => {
+                let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
+                if let Some(batter) = game.batting_team().batter {
+                    if batter == target {
+                        game.batting_team_mut().batter = Some(replacement_id);
+                    }
+                } else if target == game.pitching_team().pitcher {
+                    game.pitching_team_mut().pitcher = replacement_id;
+                }
+                world.replace_player(target, replacement_id);
+            },
+            Event::Peanut { target, yummy } => {
+                let coeff = if yummy {
+                    0.2
+                } else {
+                    -0.2
+                };
+                let player = world.player_mut(target);
+
+                //todo: surely there's a better way
+                player.buoyancy += coeff;
+                player.divinity += coeff;
+                player.martyrdom += coeff;
+                player.moxie += coeff;
+                player.musclitude += coeff;
+                player.patheticism -= coeff;
+                player.thwackability += coeff;
+                player.tragicness -= coeff;
+                player.coldness += coeff;
+                player.overpowerment += coeff;
+                player.ruthlessness += coeff;
+                player.shakespearianism += coeff;
+                player.suppression += coeff;
+                player.unthwackability += coeff;
+                player.base_thirst += coeff;
+                player.continuation += coeff;
+                player.ground_friction += coeff;
+                player.indulgence += coeff;
+                player.laserlikeness += coeff;
+                player.anticapitalism += coeff;
+                player.chasiness += coeff;
+                player.omniscience += coeff;
+                player.tenaciousness += coeff;
+                player.watchfulness += coeff;
+            },
+            Event::Feedback { target1, target2 } => {
+                if let Some(batter) = game.batting_team().batter {
+                    if batter == target1 {
+                        game.batting_team_mut().batter = Some(target2);
+                    } else {
+                        game.pitching_team_mut().pitcher = target2;
+                    }
+                }
+                world.swap(target1, target2);
+            },
+            Event::Reverb { reverb_type, team, ref changes } => {
+                world.team_mut(team).apply_reverb_changes(reverb_type, changes);
+                if game.batting_team().id == team && reverb_type != 3 {
+                    let idx = game.batting_team().batter_index;
+                    let world_team = world.team(team);
+                    let new_batter = world_team.lineup[idx % world_team.lineup.len()].clone();
+                    game.batting_team_mut().batter = Some(new_batter);
+                } else if game.pitching_team().id == team && reverb_type != 2 {
+                    game.pitching_team_mut().pitcher = world.team(team).rotation[0].clone();
+                } else if game.batting_team().id == team && reverb_type != 2 {
+                    game.batting_team_mut().pitcher = world.team(team).rotation[0].clone();
+                }
+            },
+            Event::Blooddrain { drainer, target, stat, .. } => {
+                let drainer_mut = world.player_mut(drainer);
+                match stat {
+                    0 => {
+                        drainer_mut.coldness += 0.1;
+                        drainer_mut.overpowerment += 0.1;
+                        drainer_mut.ruthlessness += 0.1;
+                        drainer_mut.shakespearianism += 0.1;
+                        drainer_mut.suppression += 0.1;
+                        drainer_mut.unthwackability += 0.1;
+                    },
+                    1 => {
+                        drainer_mut.buoyancy += 0.1;
+                        drainer_mut.divinity += 0.1;
+                        drainer_mut.martyrdom += 0.1;
+                        drainer_mut.moxie += 0.1;
+                        drainer_mut.musclitude += 0.1;
+                        drainer_mut.patheticism -= 0.1;
+                        drainer_mut.thwackability += 0.1;
+                        drainer_mut.tragicness -= 0.1;
+                    },
+                    2 => {
+                        drainer_mut.anticapitalism += 0.1;
+                        drainer_mut.chasiness += 0.1;
+                        drainer_mut.omniscience += 0.1;
+                        drainer_mut.tenaciousness += 0.1;
+                        drainer_mut.watchfulness += 0.1;
+                    },
+                    3 => {
+                        drainer_mut.base_thirst += 0.1;
+                        drainer_mut.continuation += 0.1;
+                        drainer_mut.ground_friction += 0.1;
+                        drainer_mut.indulgence += 0.1;
+                        drainer_mut.laserlikeness += 0.1;
+                    },
+                    _ => {
+                    
+                    }
+                }
+
+                let target_mut = world.player_mut(target);
+                match stat {
+                    0 => {
+                        target_mut.coldness -= 0.1;
+                        target_mut.overpowerment -= 0.1;
+                        target_mut.ruthlessness -= 0.1;
+                        target_mut.shakespearianism -= 0.1;
+                        target_mut.suppression -= 0.1;
+                        target_mut.unthwackability -= 0.1;
+                    },
+                    1 => {
+                        target_mut.buoyancy -= 0.1;
+                        target_mut.divinity -= 0.1;
+                        target_mut.martyrdom -= 0.1;
+                        target_mut.moxie -= 0.1;
+                        target_mut.musclitude -= 0.1;
+                        target_mut.patheticism += 0.1;
+                        target_mut.thwackability -= 0.1;
+                        target_mut.tragicness += 0.1;
+                    },
+                    2 => {
+                        target_mut.anticapitalism -= 0.1;
+                        target_mut.chasiness -= 0.1;
+                        target_mut.omniscience -= 0.1;
+                        target_mut.tenaciousness -= 0.1;
+                        target_mut.watchfulness -= 0.1;
+                    },
+                    3 => {
+                        target_mut.base_thirst -= 0.1;
+                        target_mut.continuation -= 0.1;
+                        target_mut.ground_friction -= 0.1;
+                        target_mut.indulgence -= 0.1;
+                        target_mut.laserlikeness -= 0.1;
+                    },
+                    _ => {
+
+                    }
+                }
             }
         }
     }
@@ -221,7 +393,6 @@ enum PitchOutcome {
     Triple { advancing_runners: Vec<Uuid> },
     Double { advancing_runners: Vec<Uuid> },
     Single { advancing_runners: Vec<Uuid> },
-    // todo: dp/fc
 }
 
 struct BasePlugin;
@@ -546,5 +717,131 @@ impl Plugin for StealingPlugin {
         }
 
         None
+    }
+}
+
+struct WeatherPlugin;
+impl Plugin for WeatherPlugin {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        match game.weather {
+            Weather::Sun => None,
+            Weather::Eclipse => {
+                //todo: add fortification
+                if rng.next() < 0.00045 {
+                    let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
+                    let replacement = Player::new(rng);
+                    return Some(Event::Incineration { 
+                        target,
+                        replacement
+                    });
+                }
+                None
+            },
+            Weather::Peanuts => {
+                if rng.next() < 0.0006 {
+                    //idk if runners can have a reaction
+                    //but this is assuming it's the same as incins
+                    let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
+                    return Some(Event::Peanut {
+                        target,
+                        yummy: false
+                    });
+                }
+                None
+            },
+            Weather::Birds => None, //lol
+            Weather::Feedback => {
+                let is_batter = rng.next() < (9.0 / 14.0);
+                if rng.next() < 0.0001 {
+                    if is_batter {
+                        let target2 = game.pick_fielder(world, rng.next());
+                        return Some(Event::Feedback {
+                            target1: game.batting_team().batter.unwrap(),
+                            target2
+                        });
+                    }
+
+                    let batting_team = world.team(game.batting_team().id);
+                    let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
+                    let target2 = batting_team.rotation[idx];
+                    return Some(Event::Feedback {
+                        target1: game.pitching_team().pitcher,
+                        target2
+                    });
+                }
+                None
+            },
+            Weather::Reverb => {
+                //estimate
+                if rng.next() < 0.00008 {
+                    let reverb_type = (rng.next() * 4.0).floor() as u8;
+                    let team_id = if rng.next() < 0.5 {
+                        game.home_team.id
+                    } else {
+                        game.away_team.id
+                    };
+
+                    let changes = world.team(team_id.clone()).roll_reverb_changes(rng, reverb_type);
+                    
+                    return Some(Event::Reverb {
+                        reverb_type,
+                        team: team_id,
+                        changes
+                    });
+                }
+                None
+            },
+            Weather::Blooddrain => {
+                if rng.next() < 0.00065 {
+                    let fielding_team_drains = rng.next() < 0.5;
+                    let is_atbat = rng.next() < 0.5;
+                    if is_atbat {
+                        if fielding_team_drains {
+                            return Some(Event::Blooddrain {
+                                drainer: game.pitching_team().pitcher,
+                                target: game.batting_team().batter.unwrap(),
+                                stat: (rng.next() * 4.0).floor() as u8,
+                                siphon: false,
+                                siphon_effect: -1
+                            });
+                        } else {
+                            return Some(Event::Blooddrain {
+                                drainer: game.batting_team().batter.unwrap(),
+                                target: game.pitching_team().pitcher,
+                                stat: (rng.next() * 4.0).floor() as u8,
+                                siphon: false,
+                                siphon_effect: -1
+                            });
+                        }
+                    } else {
+                        let fielder_roll = rng.next();
+                        let fielder = game.pick_fielder(world, fielder_roll);
+                        let hitter = if game.runners.empty() {
+                            game.batting_team().batter.unwrap()
+                        } else {
+                            game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batting_team().batter.unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
+                        };
+                        if fielding_team_drains {
+                            return Some(Event::Blooddrain {
+                                drainer: fielder,
+                                target: hitter,
+                                stat: (rng.next() * 4.0).floor() as u8,
+                                siphon: false,
+                                siphon_effect: -1
+                            });
+                        } else {
+                            return Some(Event::Blooddrain {
+                                drainer: hitter,
+                                target: fielder,
+                                stat: (rng.next() * 4.0).floor() as u8,
+                                siphon: false,
+                                siphon_effect: -1
+                            });
+                        }
+                    }
+                }
+                None
+            }
+        }
     }
 }

@@ -11,7 +11,13 @@ pub mod sim;
 
 #[derive(Clone, Debug)]
 pub enum Weather {
-    Sun2,
+    Sun,
+    Eclipse,
+    Peanuts,
+    Birds,
+    Feedback,
+    Reverb,
+    Blooddrain,
 }
 
 #[derive(Clone, Debug)]
@@ -69,6 +75,49 @@ impl Game {
 
         let idx = (roll * (pitching_team.lineup.len() as f64)).floor() as usize;
         pitching_team.lineup[idx]
+    }
+
+    //might turn this into a more general function later
+    //in place of an official incin target algorithm this might do
+    fn pick_player_weighted(&self, world: &World, roll: f64, weight: impl Fn(Uuid) -> f64, only_current: bool) -> Uuid {
+        let home_team = world.team(self.home_team.id);
+        let away_team = world.team(self.away_team.id);
+
+        let mut eligible_players = Vec::new();
+        for i in 0..home_team.lineup.len() {
+            eligible_players.push(home_team.lineup[i].clone());
+        }
+        for i in 0..away_team.lineup.len() {
+            eligible_players.push(away_team.lineup[i].clone());
+        }
+        if only_current {
+            eligible_players.push(self.home_team.pitcher.clone());
+            eligible_players.push(self.away_team.pitcher.clone());
+        } else {
+            for i in 0..home_team.rotation.len() {
+                eligible_players.push(home_team.rotation[i].clone());
+            }
+            for i in 0..away_team.rotation.len() {
+                eligible_players.push(away_team.rotation[i].clone());
+            }
+        }
+
+        let mut weights: Vec<f64> = Vec::new();
+        for i in 0..eligible_players.len() {
+            weights.push(weight(eligible_players[i]));
+        }
+        let weight_sum = weights.iter().sum::<f64>();
+        let chosen_weight = roll * weight_sum;
+
+        let mut counter = 0.0;
+        for idx in 0..weights.len() {
+            if chosen_weight < counter {
+                return eligible_players[idx];
+            } else {
+                counter += weights[idx];
+            }
+        }
+        panic!("what");
     }
 
     // todo: all of these are kind of nasty and will borrow all of self and that's usually annoying

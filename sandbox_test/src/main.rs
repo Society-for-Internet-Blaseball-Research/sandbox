@@ -1,23 +1,23 @@
 use sandbox::{
     bases::Baserunners,
-    entities::{Player, Team, World},
-    mods::Mods,
+    entities::{World},
     rng::Rng,
     sim::{Event, Sim},
     Game, GameTeam,
 };
-use uuid::Uuid;
 
 fn main() {
-    //let mut rng = Rng::new(69, 420);
-    let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
+    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
+    //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
+    //let mut rng = Rng::new(37, 396396396396);
 
     let mut world = World::new();
-    let team_a = gen_team(&mut world, &mut rng, "Team A".to_string(), "A".to_string());
-    let team_b = gen_team(&mut world, &mut rng, "Team B".to_string(), "B".to_string());
+    let team_a = world.gen_team(&mut rng, "Team A".to_string(), "A".to_string());
+    let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
 
     let mut game = Game {
-        weather: sandbox::Weather::Sun2,
+        weather: sandbox::Weather::Blooddrain,
         top: true,
         inning: 1,
         home_team: GameTeam {
@@ -74,73 +74,4 @@ fn main() {
     }
 
     // println!("Hello, world!");
-}
-
-fn gen_team(world: &mut World, rng: &mut Rng, name: String, emoji: String) -> Uuid {
-    let id = Uuid::new_v4();
-    let mut team = Team {
-        id,
-        emoji: emoji,
-        lineup: Vec::new(),
-        rotation: Vec::new(),
-        shadows: Vec::new(),
-        name: name,
-        mods: Mods::new(),
-    };
-
-    for _ in 0..9 {
-        team.lineup.push(gen_player(world, rng));
-    }
-
-    for _ in 0..5 {
-        team.rotation.push(gen_player(world, rng));
-    }
-
-    for _ in 0..11 {
-        team.shadows.push(gen_player(world, rng));
-    }
-
-    world.insert_team(team);
-    id
-}
-
-fn gen_player(world: &mut World, rng: &mut Rng) -> Uuid {
-    let id = Uuid::new_v4();
-
-    let name = format!("Player {}", &id.to_string()[..8]);
-    let player = Player {
-        id: id,
-        name,
-        mods: Mods::new(),
-
-        // this is not rng order compatible
-        buoyancy: rng.next(),
-        divinity: rng.next(),
-        martyrdom: rng.next(),
-        moxie: rng.next(),
-        musclitude: rng.next(),
-        patheticism: rng.next(),
-        thwackability: rng.next(),
-        tragicness: rng.next(),
-        coldness: rng.next(),
-        overpowerment: rng.next(),
-        ruthlessness: rng.next(),
-        shakespearianism: rng.next(),
-        suppression: rng.next(),
-        unthwackability: rng.next(),
-        base_thirst: rng.next(),
-        continuation: rng.next(),
-        ground_friction: rng.next(),
-        indulgence: rng.next(),
-        laserlikeness: rng.next(),
-        anticapitalism: rng.next(),
-        chasiness: rng.next(),
-        omniscience: rng.next(),
-        tenaciousness: rng.next(),
-        watchfulness: rng.next(),
-        pressurization: rng.next(),
-        cinnamon: rng.next(),
-    };
-    world.insert_player(player);
-    id
 }

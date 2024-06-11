@@ -33,6 +33,10 @@ impl Baserunners {
             .map(|x| x.id.clone())
     }
 
+    pub fn contains(&self, id: Uuid) -> bool {
+        self.runners.iter().any(|x| x.id == id)
+    }
+
     pub fn advance(&mut self, base: u8) {
         for r in self.runners.iter_mut() {
             if r.base == base {
