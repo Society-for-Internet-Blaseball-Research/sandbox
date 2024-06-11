@@ -18,6 +18,8 @@ pub enum Weather {
     Feedback,
     Reverb,
     Blooddrain,
+    Sun2,
+    BlackHole
 }
 
 #[derive(Clone, Debug)]

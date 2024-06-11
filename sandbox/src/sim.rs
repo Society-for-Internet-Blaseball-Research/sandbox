@@ -111,6 +111,12 @@ pub enum Event {
         stat: u8,
         siphon: bool,
         siphon_effect: i16
+    },
+    Sun2 {
+        home_team: bool,
+    },
+    BlackHole {
+        home_team: bool,
     }
 }
 
@@ -359,6 +365,21 @@ impl Event {
                     _ => {
 
                     }
+                }
+            },
+            //todo: add win manipulation when we actually have wins
+            Event::Sun2 { home_team } => {
+                if home_team {
+                    game.home_team.score -= 10.0;
+                } else {
+                    game.away_team.score -= 10.0;
+                }
+            }
+            Event::BlackHole { home_team } => {
+                if home_team {
+                    game.home_team.score -= 10.0;
+                } else {
+                    game.away_team.score -= 10.0;
                 }
             }
         }
@@ -841,7 +862,25 @@ impl Plugin for WeatherPlugin {
                     }
                 }
                 None
-            }
+            },
+            Weather::Sun2 => {
+                if game.home_team.score - 10.0 >= -0.001 { //ugh
+                    Some(Event::Sun2 { home_team: true })
+                } else if game.away_team.score - 10.0 >= -0.001 {
+                    Some(Event::Sun2 { home_team: false })
+                } else {
+                    None
+                }
+            },
+            Weather::BlackHole => {
+                if game.home_team.score - 10.0 >= -0.001 {
+                    Some(Event::BlackHole { home_team: true })
+                } else if game.away_team.score - 10.0 >= -0.001 {
+                    Some(Event::BlackHole { home_team: false })
+                } else {
+                    None
+                }
+            },
         }
     }
 }
