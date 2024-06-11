@@ -148,7 +148,7 @@ impl Event {
             }
             Event::Strikeout => {
                 game.outs += 1;
-                end_pa(game);
+                game.end_pa();
             }
             Event::Walk => {
                 // maybe we should put batter in the event
@@ -156,13 +156,13 @@ impl Event {
                 game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
                 game.base_sweep();
-                end_pa(game);
+                game.end_pa();
             }
             Event::HomeRun => {
                 game.runners.advance_all(4);
                 game.base_sweep();
                 game.batting_team_mut().score += 1.0; //lazy workaround to score the home run hitter
-                end_pa(game);
+                game.end_pa();
             }
             Event::BaseHit {
                 bases,
@@ -172,7 +172,7 @@ impl Event {
                 game.base_sweep();
                 game.runners
                     .add(bases - 1, game.batting_team().batter.unwrap());
-                end_pa(game);
+                game.end_pa();
             }
             Event::GroundOut {
                 fielder: _fielder,
@@ -181,7 +181,7 @@ impl Event {
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.base_sweep();
-                end_pa(game);
+                game.end_pa();
             }
             Event::Flyout {
                 fielder: _fielder,
@@ -190,20 +190,20 @@ impl Event {
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.base_sweep();
-                end_pa(game);
+                game.end_pa();
             }
             Event::DoublePlay { ref runners_after } => {
                 game.outs += 2;
                 game.runners = runners_after.clone();
                 game.base_sweep();
-                end_pa(game);
+                game.end_pa();
             }
             Event::FieldersChoice { ref runners_after } => {
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.runners.add(0, game.batting_team().batter.unwrap());
                 game.base_sweep();
-                end_pa(game);
+                game.end_pa();
             }
             Event::BaseSteal {
                 runner: _runner,
@@ -384,15 +384,6 @@ impl Event {
             }
         }
     }
-}
-
-// this should maybe be an instance method on Game idk
-fn end_pa(game: &mut Game) {
-    let bt = game.batting_team_mut();
-    bt.batter = None;
-    bt.batter_index += 1;
-    game.balls = 0;
-    game.strikes = 0;
 }
 
 enum PitchOutcome {

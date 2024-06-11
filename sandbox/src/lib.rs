@@ -72,6 +72,15 @@ impl Game {
         self.runners = new_runners;
     }
 
+    
+    fn end_pa(&mut self) {
+        let bt = self.batting_team_mut();
+        bt.batter = None;
+        bt.batter_index += 1;
+        self.balls = 0;
+        self.strikes = 0;
+    }
+
     fn pick_fielder(&self, world: &World, roll: f64) -> Uuid {
         let pitching_team = world.team(self.pitching_team().id);
 
