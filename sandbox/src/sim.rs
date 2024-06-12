@@ -70,8 +70,12 @@ pub enum Event {
         fielder: Uuid,
         runners_after: Baserunners,
     },
-    DoublePlay,
-    FieldersChoice,
+    DoublePlay {
+        runners_after: Baserunners
+    },
+    FieldersChoice {
+        runners_after: Baserunners
+    },
 
     BaseSteal {
         runner: Uuid,
@@ -97,6 +101,7 @@ impl Event {
                 game.outs = 0;
                 game.balls = 0;
                 game.strikes = 0;
+                game.runners = Baserunners::new();
             }
             Event::GameOver => {}
             Event::Ball => {
@@ -115,12 +120,16 @@ impl Event {
             }
             Event::Walk => {
                 // maybe we should put batter in the event
+                // todo: make a function that returns the current batter
+                game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.base_sweep();
                 end_pa(game);
             }
             Event::HomeRun => {
                 game.runners.advance_all(4);
                 game.base_sweep();
+                game.batting_team_mut().score += 1.0; //lazy workaround to score the home run hitter
                 end_pa(game);
             }
             Event::BaseHit {
@@ -137,6 +146,7 @@ impl Event {
                 fielder: _fielder,
                 ref runners_after,
             } => {
+                //todo: runner advancement
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.base_sweep();
@@ -151,8 +161,19 @@ impl Event {
                 game.base_sweep();
                 end_pa(game);
             }
-            Event::DoublePlay => todo!(),
-            Event::FieldersChoice => todo!(),
+            Event::DoublePlay { ref runners_after } => {
+                game.outs += 2;
+                game.runners = runners_after.clone();
+                game.base_sweep();
+                end_pa(game);
+            }
+            Event::FieldersChoice { ref runners_after } => {
+                game.outs += 1;
+                game.runners = runners_after.clone();
+                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.base_sweep();
+                end_pa(game);
+            }
             Event::BaseSteal {
                 runner: _runner,
                 base_from,
@@ -186,12 +207,20 @@ enum PitchOutcome {
     StrikeSwinging,
     StrikeLooking,
     Foul,
-    GroundOut { fielder: Uuid },
-    Flyout { fielder: Uuid },
+    GroundOut {
+        fielder: Uuid,
+        advancing_runners: Vec<Uuid>
+    },
+    Flyout { 
+        fielder: Uuid,
+        advancing_runners: Vec<Uuid>
+    },
+    DoublePlay { runner_out: u8 },
+    FieldersChoice { runner_out: u8 },
     HomeRun,
-    Triple,
-    Double,
-    Single,
+    Triple { advancing_runners: Vec<Uuid> },
+    Double { advancing_runners: Vec<Uuid> },
+    Single { advancing_runners: Vec<Uuid> },
     // todo: dp/fc
 }
 
@@ -227,42 +256,67 @@ impl Plugin for BasePlugin {
                 }
             }
             PitchOutcome::Foul => Event::Foul,
-            PitchOutcome::GroundOut { fielder } => Event::GroundOut {
-                fielder,
-                runners_after: game.runners.clone(),
+            PitchOutcome::GroundOut { fielder, advancing_runners } => {
+                let mut new_runners = game.runners.clone();
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
+                Event::GroundOut {
+                    fielder,
+                    runners_after: new_runners,
+                }
             },
-            PitchOutcome::Flyout { fielder } => Event::Flyout {
-                fielder,
-                runners_after: game.runners.clone(),
+            PitchOutcome::Flyout { fielder, advancing_runners } => {
+                let mut new_runners = game.runners.clone();
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
+                Event::Flyout {
+                    fielder,
+                    runners_after: new_runners,
+                }
             },
+            PitchOutcome::DoublePlay { runner_out } => {
+                let mut new_runners = game.runners.clone();
+                new_runners.remove(runner_out);
+                new_runners.advance_all(1);
+                Event::DoublePlay {
+                    runners_after: new_runners
+                }
+            },
+            PitchOutcome::FieldersChoice { runner_out } => {
+                let mut new_runners = game.runners.clone();
+                new_runners.remove(runner_out);
+                new_runners.advance_all(1);
+                Event::FieldersChoice {
+                    runners_after: new_runners
+                }
+            },
+
             PitchOutcome::HomeRun => Event::HomeRun,
 
             // todo: there may be a subtle bug here since we don't sweep the runners after the forced advance
             // runner [1, 0], double, then we're at [3, 2], 3 *should* get swept and *then* 2 should get to advance to 3...
-            PitchOutcome::Triple => {
+            PitchOutcome::Triple { advancing_runners }=> {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(3);
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::BaseHit {
                     bases: 3,
                     runners_after: new_runners,
                 }
             }
 
-            PitchOutcome::Double => {
+            PitchOutcome::Double { advancing_runners } => {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(2);
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::BaseHit {
                     bases: 2,
                     runners_after: new_runners,
                 }
             }
 
-            PitchOutcome::Single => {
+            PitchOutcome::Single { advancing_runners } => {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(1);
-                new_runners.advance_if(|_runner| rng.next() < 0.5);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
                 Event::BaseHit {
                     bases: 1,
                     runners_after: new_runners,
@@ -306,21 +360,71 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let out_defender_id = game.pick_fielder(world, rng.next());
     let out_defender = world.player(out_defender_id);
 
-    let is_out = rng.next() < formulas::out_threshold(pitcher, batter, out_defender);
+    let is_out = rng.next() > formulas::out_threshold(pitcher, batter, out_defender);
     if is_out {
         let fly_defender_id = game.pick_fielder(world, rng.next());
-        let fly_defender = world.player(out_defender_id);
+        let fly_defender = world.player(out_defender_id); //is this correct?
 
         let is_fly = rng.next() < formulas::fly_threshold(fly_defender);
         if is_fly {
+            let mut advancing_runners = Vec::new();
+            for baserunner in game.runners.iter() {
+                let base_from = baserunner.base;
+                let runner_id = baserunner.id.clone();
+                let runner = world.player(runner_id);
+
+                if rng.next() < formulas::flyout_advancement_threshold(runner, base_from) {
+                    advancing_runners.push(runner_id);
+                }
+            }
             return PitchOutcome::Flyout {
                 fielder: fly_defender_id,
+                advancing_runners
             };
         }
 
         let ground_defender_id = game.pick_fielder(world, rng.next());
+        let mut advancing_runners = Vec::new();
+
+        if !game.runners.empty() {
+            let dp_roll = rng.next();
+            if game.runners.occupied(0) {
+                if game.outs < 2 && dp_roll < formulas::double_play_threshold(batter, pitcher, out_defender) {
+                    return PitchOutcome::DoublePlay {
+                        runner_out: game.runners.pick_runner(rng.next())
+                    };
+                } else {
+                    let sac_roll = rng.next();
+                    if sac_roll < formulas::groundout_sacrifice_threshold(batter) {
+                        for baserunner in game.runners.iter() {
+                            let runner_id = baserunner.id.clone();
+                            let runner = world.player(runner_id);
+                            if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender) {
+                                advancing_runners.push(runner_id);
+                            }
+                        }
+                        return PitchOutcome::GroundOut {
+                            fielder: ground_defender_id,
+                            advancing_runners
+                        };
+                    } else {
+                        return PitchOutcome::FieldersChoice {
+                            runner_out: game.runners.pick_runner_fc()
+                        }
+                    }
+                }
+            }
+            for baserunner in game.runners.iter() {
+                let runner_id = baserunner.id.clone();
+                let runner = world.player(runner_id);
+                if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender) {
+                    advancing_runners.push(runner_id);
+                }
+            }
+        }
         return PitchOutcome::GroundOut {
             fielder: ground_defender_id,
+            advancing_runners
         };
     }
 
@@ -334,14 +438,30 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let double_roll = rng.next();
     let triple_roll = rng.next();
 
-    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender) {
-        return PitchOutcome::Triple;
-    }
-    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender) {
-        return PitchOutcome::Double;
+    let mut advancing_runners = Vec::new();
+    for baserunner in game.runners.iter() {
+        let runner_id = baserunner.id.clone();
+        let runner = world.player(runner_id);
+
+        if rng.next() < formulas::hit_advancement_threshold(runner, hit_defender) {
+            advancing_runners.push(runner_id);
+        }
     }
 
-    PitchOutcome::Single
+    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender) {
+        return PitchOutcome::Triple {
+            advancing_runners
+        };
+    }
+    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender) {
+        return PitchOutcome::Double {
+            advancing_runners
+        };
+    }
+
+    PitchOutcome::Single {
+        advancing_runners
+    }
 }
 
 struct BatterStatePlugin;
@@ -366,8 +486,14 @@ impl Plugin for InningStatePlugin {
             return None;
         }
 
-        let tied = (game.away_team.score - game.home_team.score).abs() < 0.01; // lol floats
-        if game.inning >= 9 && !tied {
+        let lead = if (game.away_team.score - game.home_team.score).abs() < 0.01 {
+            0
+        } else if game.away_team.score > game.home_team.score {
+            1
+        } else {
+            -1
+        }; // lol floats
+        if game.inning >= 9 && (lead == -1 || !game.top && lead == 1) {
             return Some(Event::GameOver);
         }
 

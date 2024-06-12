@@ -9,7 +9,8 @@ use sandbox::{
 use uuid::Uuid;
 
 fn main() {
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
+    let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
 
     let mut world = World::new();
     let team_a = gen_team(&mut world, &mut rng, "Team A".to_string(), "A".to_string());
