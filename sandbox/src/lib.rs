@@ -19,7 +19,11 @@ pub enum Weather {
     Reverb,
     Blooddrain,
     Sun2,
-    BlackHole
+    BlackHole,
+    //Coffee
+    //Coffee 2
+    //Coffee 3
+    Salmon
 }
 
 #[derive(Clone, Debug)]
@@ -32,10 +36,15 @@ pub struct Game {
     pub strikes: i16,
     pub outs: i16,
 
+    pub events_inning: i16,
+
     pub home_team: GameTeam,
     pub away_team: GameTeam,
 
     pub runners: Baserunners,
+
+    pub linescore_home: Vec<f64>, //for salmon purposes
+    pub linescore_away: Vec<f64>, //the first element is the total score
 }
 
 #[derive(Clone, Debug)]

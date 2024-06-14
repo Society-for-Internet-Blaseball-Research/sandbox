@@ -21,6 +21,7 @@ impl<'a> Sim<'a> {
             rng,
             plugins: vec![
                 Box::new(InningStatePlugin),
+                Box::new(ExtraWeatherPlugin),
                 Box::new(BatterStatePlugin),
                 Box::new(WeatherPlugin),
                 Box::new(StealingPlugin),
@@ -117,6 +118,10 @@ pub enum Event {
     },
     BlackHole {
         home_team: bool,
+    },
+    Salmon {
+        home_runs_lost: bool,
+        away_runs_lost: bool
     }
 }
 
@@ -128,11 +133,23 @@ impl Event {
                 bt.batter = Some(batter);
             }
             Event::InningSwitch { inning, top } => {
+                if let Weather::Salmon = game.weather {
+                    if game.top {
+                        let runs_away = game.away_team.score - game.linescore_away[0];
+                        game.linescore_away.push(runs_away);
+                        game.linescore_away[0] += runs_away;
+                    } else {
+                        let runs_home = game.home_team.score - game.linescore_home[0];
+                        game.linescore_home.push(runs_home);
+                        game.linescore_home[0] += runs_home;
+                    }
+                }
                 game.inning = inning;
                 game.top = top;
                 game.outs = 0;
                 game.balls = 0;
                 game.strikes = 0;
+                game.events_inning = 0;
                 game.runners = Baserunners::new();
             }
             Event::GameOver => {}
@@ -380,6 +397,19 @@ impl Event {
                     game.home_team.score -= 10.0;
                 } else {
                     game.away_team.score -= 10.0;
+                }
+            },
+            Event::Salmon { home_runs_lost, away_runs_lost } => {
+                if away_runs_lost {
+                    game.away_team.score -= game.linescore_away[(game.inning - 1) as usize];
+                }
+                if home_runs_lost {
+                    game.home_team.score -= game.linescore_home[(game.inning - 1) as usize];
+                }
+                if !game.top {
+                    game.top = true
+                } else {
+                    game.inning -= 1;
                 }
             }
         }
@@ -872,6 +902,40 @@ impl Plugin for WeatherPlugin {
                     None
                 }
             },
+            Weather::Salmon => None
         }
+    }
+}
+
+struct ExtraWeatherPlugin;
+impl Plugin for ExtraWeatherPlugin {
+    fn tick(&self, game: &Game, _world: &World, rng: &mut Rng) -> Option<Event> {
+        if let Weather::Salmon = game.weather {
+            let away_team_scored = game.linescore_away.last().unwrap().abs() > 0.01;
+            let home_team_scored = if !game.top { false } else { game.linescore_home.last().unwrap().abs() > 0.01 };
+            if game.events_inning == 0 && (away_team_scored || home_team_scored) {
+                let salmon_activated = rng.next() < 0.1375;
+                if salmon_activated {
+                    let runs_lost = rng.next() < 0.675; //rough estimate
+                    if runs_lost {
+                        if away_team_scored && home_team_scored {
+                            let double_runs_lost = rng.next() < 0.2; //VERY rough estimate
+                            if double_runs_lost {
+                                return Some(Event::Salmon { away_runs_lost: true, home_runs_lost: true });
+                            }
+                            let home_runs_lost = rng.next() < 0.5;
+                            return Some(Event::Salmon { away_runs_lost: !home_runs_lost, home_runs_lost });
+                        }
+                        if away_team_scored {
+                            return Some(Event::Salmon { away_runs_lost: true, home_runs_lost: false });
+                        }
+                        return Some(Event::Salmon { away_runs_lost: false, home_runs_lost: true });
+                    }
+                    return Some(Event::Salmon { away_runs_lost: false, home_runs_lost: false });
+                }
+            }
+            return None;
+        }
+        None
     }
 }
