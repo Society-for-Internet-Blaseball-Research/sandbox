@@ -122,7 +122,8 @@ pub enum Event {
     Salmon {
         home_runs_lost: bool,
         away_runs_lost: bool
-    }
+    },
+    PolaritySwitch,
 }
 
 impl Event {
@@ -178,7 +179,7 @@ impl Event {
             Event::HomeRun => {
                 game.runners.advance_all(4);
                 game.base_sweep();
-                game.batting_team_mut().score += 1.0; //lazy workaround to score the home run hitter
+                game.batting_team_mut().score += game.get_run_value(); //lazy workaround to score the home run hitter
                 game.end_pa();
             }
             Event::BaseHit {
@@ -411,6 +412,9 @@ impl Event {
                 } else {
                     game.inning -= 1;
                 }
+            },
+            Event::PolaritySwitch => {
+                game.polarity = !game.polarity;
             }
         }
     }
@@ -902,7 +906,13 @@ impl Plugin for WeatherPlugin {
                     None
                 }
             },
-            Weather::Salmon => None
+            Weather::Salmon => None,
+            Weather::PolarityPlus | Weather::PolarityMinus => {
+                if rng.next() < 0.035 {
+                    return Some(Event::PolaritySwitch);
+                }
+                None
+            },
         }
     }
 }

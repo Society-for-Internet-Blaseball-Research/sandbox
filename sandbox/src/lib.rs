@@ -23,7 +23,10 @@ pub enum Weather {
     //Coffee
     //Coffee 2
     //Coffee 3
-    Salmon
+    Salmon,
+    //Glitter
+    PolarityPlus,
+    PolarityMinus
 }
 
 #[derive(Clone, Debug)]
@@ -37,6 +40,7 @@ pub struct Game {
     pub outs: i16,
 
     pub events_inning: i16,
+    pub polarity: bool, //false for positive, true for negative
 
     pub home_team: GameTeam,
     pub away_team: GameTeam,
@@ -68,13 +72,14 @@ impl Game {
             if runner.base < 3 {
                 new_runners.add(runner.base, runner.id);
             } else {
+                let run_value = self.get_run_value();
                 let batting_team = if self.top {
                     &mut self.away_team
                 } else {
                     &mut self.home_team
                 };
                 if self.outs < 3 {
-                    batting_team.score += 1.0;
+                    batting_team.score += run_value;
                 }
             }
         }
@@ -138,6 +143,11 @@ impl Game {
             }
         }
         panic!("what");
+    }
+
+    pub fn get_run_value(&self) -> f64 {
+        let polarity_coeff = if self.polarity { -1.0 } else { 1.0 };
+        1.0 * polarity_coeff
     }
 
     // todo: all of these are kind of nasty and will borrow all of self and that's usually annoying
