@@ -26,7 +26,8 @@ pub enum Weather {
     Salmon,
     //Glitter
     PolarityPlus,
-    PolarityMinus
+    PolarityMinus,
+    SunPointOne
 }
 
 #[derive(Clone, Debug)]
@@ -147,7 +148,8 @@ impl Game {
 
     pub fn get_run_value(&self) -> f64 {
         let polarity_coeff = if self.polarity { -1.0 } else { 1.0 };
-        1.0 * polarity_coeff
+        let sun_point_one_coeff = if let Weather::SunPointOne = self.weather { (self.inning as f64) / 10.0 } else { 1.0 };
+        1.0 * polarity_coeff * sun_point_one_coeff
     }
 
     // todo: all of these are kind of nasty and will borrow all of self and that's usually annoying

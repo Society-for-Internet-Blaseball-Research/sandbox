@@ -913,6 +913,7 @@ impl Plugin for WeatherPlugin {
                 }
                 None
             },
+            Weather::SunPointOne => None
         }
     }
 }

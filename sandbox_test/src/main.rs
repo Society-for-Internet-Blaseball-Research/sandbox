@@ -7,17 +7,18 @@ use sandbox::{
 };
 
 fn main() {
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    //let mut rng = Rng::new(37, 396396396396);
+    let mut rng = Rng::new(37, 396396396396);
+    //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
     let team_a = world.gen_team(&mut rng, "Team A".to_string(), "A".to_string());
     let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
 
     let mut game = Game {
-        weather: sandbox::Weather::Blooddrain,
+        weather: sandbox::Weather::SunPointOne,
         top: true,
         inning: 1,
         home_team: GameTeam {
@@ -37,12 +38,17 @@ fn main() {
         balls: 0,
         strikes: 0,
         outs: 0,
+        events_inning: 0,
+        polarity: false,
         runners: Baserunners::new(),
+        linescore_home: vec![0.0],
+        linescore_away: vec![0.0],
     };
 
     loop {
         let mut sim = Sim::new(&mut world, &mut rng);
         let evt = sim.next(&game);
+        game.events_inning += 1;
 
         // keeping sim outside the loop means it borrows world and we can't pass it as mut here, which might be fine...?
         evt.apply(&mut game, &mut world);
@@ -59,12 +65,15 @@ fn main() {
             if game.runners.occupied(0) { "X" } else { " " }
         );
 
+        let away_score = (game.away_team.score * 10.0).round() / 10.0;
+        let home_score = (game.home_team.score * 10.0).round() / 10.0; //floats
+
         println!(
             "{}{} {}@{} ({}b/{}s/{}o) {} {:?}",
             if game.top { "t" } else { "b" },
             game.inning,
-            game.away_team.score,
-            game.home_team.score,
+            away_score,
+            home_score,
             game.balls,
             game.strikes,
             game.outs,
