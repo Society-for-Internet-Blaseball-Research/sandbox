@@ -151,6 +151,7 @@ impl Event {
                 game.balls = 0;
                 game.strikes = 0;
                 game.events_inning = 0;
+                game.scoring_plays_inning = 0;
                 game.runners = Baserunners::new();
             }
             Event::GameOver => {}
@@ -177,9 +178,13 @@ impl Event {
                 game.end_pa();
             }
             Event::HomeRun => {
+                let no_runners_on = game.runners.empty();
                 game.runners.advance_all(4);
-                game.base_sweep();
                 game.batting_team_mut().score += game.get_run_value(); //lazy workaround to score the home run hitter
+                game.base_sweep();
+                if no_runners_on {
+                    game.scoring_plays_inning += 1;
+                } //this is to make sum sun not break
                 game.end_pa();
             }
             Event::BaseHit {
@@ -913,7 +918,7 @@ impl Plugin for WeatherPlugin {
                 }
                 None
             },
-            Weather::SunPointOne => None
+            Weather::SunPointOne | Weather::SumSun => None
         }
     }
 }

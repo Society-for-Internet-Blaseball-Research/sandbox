@@ -27,7 +27,8 @@ pub enum Weather {
     //Glitter
     PolarityPlus,
     PolarityMinus,
-    SunPointOne
+    SunPointOne,
+    SumSun
 }
 
 #[derive(Clone, Debug)]
@@ -40,8 +41,9 @@ pub struct Game {
     pub strikes: i16,
     pub outs: i16,
 
-    pub events_inning: i16,
+    pub events_inning: u8,
     pub polarity: bool, //false for positive, true for negative
+    pub scoring_plays_inning: u8,
 
     pub home_team: GameTeam,
     pub away_team: GameTeam,
@@ -68,11 +70,13 @@ pub struct GameTeam {
 impl Game {
     fn base_sweep(&mut self) {
         let mut new_runners = Baserunners::new();
+        let mut scoring_play = false;
         for runner in self.runners.iter() {
             // todo: baserunner code is bad
             if runner.base < 3 {
                 new_runners.add(runner.base, runner.id);
             } else {
+                scoring_play = true;
                 let run_value = self.get_run_value();
                 let batting_team = if self.top {
                     &mut self.away_team
@@ -83,6 +87,9 @@ impl Game {
                     batting_team.score += run_value;
                 }
             }
+        }
+        if scoring_play {
+            self.scoring_plays_inning += 1;
         }
         self.runners = new_runners;
     }
@@ -149,7 +156,8 @@ impl Game {
     pub fn get_run_value(&self) -> f64 {
         let polarity_coeff = if self.polarity { -1.0 } else { 1.0 };
         let sun_point_one_coeff = if let Weather::SunPointOne = self.weather { (self.inning as f64) / 10.0 } else { 1.0 };
-        1.0 * polarity_coeff * sun_point_one_coeff
+        let sum_sun_coeff = if let Weather::SumSun = self.weather { self.scoring_plays_inning as f64 } else { 0.0 };
+        1.0 * polarity_coeff * sun_point_one_coeff + sum_sun_coeff
     }
 
     // todo: all of these are kind of nasty and will borrow all of self and that's usually annoying
