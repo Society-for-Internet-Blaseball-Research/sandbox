@@ -228,6 +228,39 @@ impl Player {
         let sin_phase = PI * ((2.0 / frequency) * (day as f64) + 0.5);
         0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
     }
+    pub fn boost(&mut self, boosts: &Vec<f64>) {
+        //todo: use the enum
+        self.buoyancy += boosts[0];
+        self.divinity += boosts[1];
+        self.martyrdom += boosts[2];
+        self.moxie += boosts[3];
+        self.musclitude += boosts[4];
+        self.patheticism -= boosts[5];
+        self.thwackability += boosts[6];
+        self.tragicness += boosts[7];
+                
+        self.coldness += boosts[8];
+        self.overpowerment += boosts[9];
+        self.ruthlessness += boosts[10];
+        self.shakespearianism += boosts[11];
+        self.suppression += boosts[12];
+        self.unthwackability += boosts[13];
+                
+        self.base_thirst += boosts[14];
+        self.continuation += boosts[15];
+        self.ground_friction += boosts[16];
+        self.indulgence += boosts[17];
+        self.laserlikeness += boosts[18];
+                
+        self.anticapitalism += boosts[19];
+        self.chasiness += boosts[20];
+        self.omniscience += boosts[21];
+        self.tenaciousness += boosts[22];
+        self.watchfulness += boosts[23];
+                
+        self.pressurization += boosts[24];
+        self.cinnamon += boosts[25];
+    }
 }
 
 #[derive(Clone, Debug)]

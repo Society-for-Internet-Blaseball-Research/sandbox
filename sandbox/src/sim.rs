@@ -124,6 +124,12 @@ pub enum Event {
         away_runs_lost: bool
     },
     PolaritySwitch,
+    NightShift {
+        batter: bool,
+        replacement: Uuid,
+        replacement_idx: usize,
+        boosts: Vec<f64>
+    }
 }
 
 impl Event {
@@ -260,33 +266,12 @@ impl Event {
                 } else {
                     -0.2
                 };
+                let mut boosts: Vec<f64> = Vec::new();
+                for _ in 0..26 {
+                    boosts.push(coeff);
+                }
                 let player = world.player_mut(target);
-
-                //todo: surely there's a better way
-                player.buoyancy += coeff;
-                player.divinity += coeff;
-                player.martyrdom += coeff;
-                player.moxie += coeff;
-                player.musclitude += coeff;
-                player.patheticism -= coeff;
-                player.thwackability += coeff;
-                player.tragicness -= coeff;
-                player.coldness += coeff;
-                player.overpowerment += coeff;
-                player.ruthlessness += coeff;
-                player.shakespearianism += coeff;
-                player.suppression += coeff;
-                player.unthwackability += coeff;
-                player.base_thirst += coeff;
-                player.continuation += coeff;
-                player.ground_friction += coeff;
-                player.indulgence += coeff;
-                player.laserlikeness += coeff;
-                player.anticapitalism += coeff;
-                player.chasiness += coeff;
-                player.omniscience += coeff;
-                player.tenaciousness += coeff;
-                player.watchfulness += coeff;
+                player.boost(&boosts);
             },
             Event::Feedback { target1, target2 } => {
                 if let Some(batter) = game.batting_team().batter {
@@ -313,82 +298,96 @@ impl Event {
             },
             Event::Blooddrain { drainer, target, stat, .. } => {
                 let drainer_mut = world.player_mut(drainer);
+                let mut boosts: Vec<f64> = Vec::new();
+                let batting = |i| i < 8;
+                let pitching = |i| i >= 8 && i < 14;
+                let baserunning = |i| i >= 14 && i < 19;
+                let defense = |i| i >= 19 && i < 24;
                 match stat {
                     0 => {
-                        drainer_mut.coldness += 0.1;
-                        drainer_mut.overpowerment += 0.1;
-                        drainer_mut.ruthlessness += 0.1;
-                        drainer_mut.shakespearianism += 0.1;
-                        drainer_mut.suppression += 0.1;
-                        drainer_mut.unthwackability += 0.1;
+                        for i in 0..26 {
+                            if pitching(i) {
+                                boosts.push(0.1);
+                            } else {
+                                boosts.push(0.0);
+                            }
+                        }
                     },
                     1 => {
-                        drainer_mut.buoyancy += 0.1;
-                        drainer_mut.divinity += 0.1;
-                        drainer_mut.martyrdom += 0.1;
-                        drainer_mut.moxie += 0.1;
-                        drainer_mut.musclitude += 0.1;
-                        drainer_mut.patheticism -= 0.1;
-                        drainer_mut.thwackability += 0.1;
-                        drainer_mut.tragicness -= 0.1;
+                        for i in 0..26 {
+                            if batting(i) {
+                                boosts.push(0.1);
+                            } else {
+                                boosts.push(0.0);
+                            }
+                        }
                     },
                     2 => {
-                        drainer_mut.anticapitalism += 0.1;
-                        drainer_mut.chasiness += 0.1;
-                        drainer_mut.omniscience += 0.1;
-                        drainer_mut.tenaciousness += 0.1;
-                        drainer_mut.watchfulness += 0.1;
+                        for i in 0..26 {
+                            if baserunning(i) {
+                                boosts.push(0.1);
+                            } else {
+                                boosts.push(0.0);
+                            }
+                        }
                     },
                     3 => {
-                        drainer_mut.base_thirst += 0.1;
-                        drainer_mut.continuation += 0.1;
-                        drainer_mut.ground_friction += 0.1;
-                        drainer_mut.indulgence += 0.1;
-                        drainer_mut.laserlikeness += 0.1;
+                        for i in 0..26 {
+                            if defense(i) {
+                                boosts.push(0.1);
+                            } else {
+                                boosts.push(0.0);
+                            }
+                        }
                     },
                     _ => {
-                    
                     }
                 }
+                drainer_mut.boost(&boosts);
 
                 let target_mut = world.player_mut(target);
+                let mut decreases: Vec<f64> = Vec::new();
                 match stat {
                     0 => {
-                        target_mut.coldness -= 0.1;
-                        target_mut.overpowerment -= 0.1;
-                        target_mut.ruthlessness -= 0.1;
-                        target_mut.shakespearianism -= 0.1;
-                        target_mut.suppression -= 0.1;
-                        target_mut.unthwackability -= 0.1;
+                        for i in 0..26 {
+                            if pitching(i) {
+                                decreases.push(-0.1);
+                            } else {
+                                decreases.push(0.0);
+                            }
+                        }
                     },
                     1 => {
-                        target_mut.buoyancy -= 0.1;
-                        target_mut.divinity -= 0.1;
-                        target_mut.martyrdom -= 0.1;
-                        target_mut.moxie -= 0.1;
-                        target_mut.musclitude -= 0.1;
-                        target_mut.patheticism += 0.1;
-                        target_mut.thwackability -= 0.1;
-                        target_mut.tragicness += 0.1;
+                        for i in 0..26 {
+                            if batting(i) {
+                                decreases.push(-0.1);
+                            } else {
+                                decreases.push(0.0);
+                            }
+                        }
                     },
                     2 => {
-                        target_mut.anticapitalism -= 0.1;
-                        target_mut.chasiness -= 0.1;
-                        target_mut.omniscience -= 0.1;
-                        target_mut.tenaciousness -= 0.1;
-                        target_mut.watchfulness -= 0.1;
+                        for i in 0..26 {
+                            if baserunning(i) {
+                                decreases.push(-0.1);
+                            } else {
+                                decreases.push(0.0);
+                            }
+                        }
                     },
                     3 => {
-                        target_mut.base_thirst -= 0.1;
-                        target_mut.continuation -= 0.1;
-                        target_mut.ground_friction -= 0.1;
-                        target_mut.indulgence -= 0.1;
-                        target_mut.laserlikeness -= 0.1;
+                        for i in 0..26 {
+                            if defense(i) {
+                                decreases.push(-0.1);
+                            } else {
+                                decreases.push(0.0);
+                            }
+                        }
                     },
                     _ => {
-
                     }
                 }
+                target_mut.boost(&decreases);
             },
             //todo: add win manipulation when we actually have wins
             Event::Sun2 { home_team } => {
@@ -420,6 +419,27 @@ impl Event {
             },
             Event::PolaritySwitch => {
                 game.polarity = !game.polarity;
+            },
+            Event::NightShift { batter, replacement, replacement_idx, ref boosts } => {
+                if batter {
+                    let team = game.batting_team();
+                    let active_batter = team.batter.unwrap();
+                    let active_batter_order = team.batter_index % world.team(team.id).lineup.len();
+                    world.team_mut(team.id).lineup[active_batter_order] = replacement;
+                    world.team_mut(team.id).shadows[replacement_idx] = active_batter;
+                    world.player_mut(replacement).boost(boosts);
+                    let team_mut = game.batting_team_mut();
+                    team_mut.batter = Some(replacement);
+                } else {
+                    let team = game.pitching_team();
+                    let active_pitcher = team.pitcher;
+                    let active_pitcher_idx = 0; //todo: this only works for one game
+                    world.team_mut(team.id).rotation[active_pitcher_idx] = replacement;
+                    world.team_mut(team.id).shadows[replacement_idx] = active_pitcher;
+                    world.player_mut(replacement).boost(boosts);
+                    let team_mut = game.pitching_team_mut();
+                    team_mut.pitcher = replacement;
+                }
             }
         }
     }
@@ -918,7 +938,30 @@ impl Plugin for WeatherPlugin {
                 }
                 None
             },
-            Weather::SunPointOne | Weather::SumSun => None
+            Weather::SunPointOne | Weather::SumSun => None,
+            Weather::Night => {
+                if rng.next() < 0.003 { //estimate
+                    if rng.next() < 0.5 {
+                        let shadows = &world.team(game.batting_team().id).shadows;
+                        let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
+                        let replacement = shadows[replacement_idx as usize];
+                        let mut boosts: Vec<f64> = Vec::new();
+                        for _ in 0..26 {
+                            boosts.push(rng.next() * 0.2);
+                        } //I think this code might be better written
+                        return Some(Event::NightShift { batter: true, replacement, replacement_idx, boosts });
+                    }
+                    let shadows = &world.team(game.pitching_team().id).shadows;
+                    let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
+                    let replacement = shadows[replacement_idx as usize];
+                    let mut boosts: Vec<f64> = Vec::new();
+                    for _ in 0..26 {
+                        boosts.push(rng.next() * 0.2);
+                    }
+                    return Some(Event::NightShift { batter: false, replacement, replacement_idx, boosts });
+                }
+                None
+            }
         }
     }
 }

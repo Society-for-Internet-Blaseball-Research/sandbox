@@ -28,7 +28,9 @@ pub enum Weather {
     PolarityPlus,
     PolarityMinus,
     SunPointOne,
-    SumSun
+    SumSun,
+    //Jazz
+    Night
 }
 
 #[derive(Clone, Debug)]
