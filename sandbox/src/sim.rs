@@ -266,10 +266,7 @@ impl Event {
                 } else {
                     -0.2
                 };
-                let mut boosts: Vec<f64> = Vec::new();
-                for _ in 0..26 {
-                    boosts.push(coeff);
-                }
+                let boosts: Vec<f64> = vec![coeff; 26];
                 let player = world.player_mut(target);
                 player.boost(&boosts);
             },
@@ -298,46 +295,30 @@ impl Event {
             },
             Event::Blooddrain { drainer, target, stat, .. } => {
                 let drainer_mut = world.player_mut(drainer);
-                let mut boosts: Vec<f64> = Vec::new();
-                let batting = |i| i < 8;
-                let pitching = |i| i >= 8 && i < 14;
-                let baserunning = |i| i >= 14 && i < 19;
-                let defense = |i| i >= 19 && i < 24;
+                let mut boosts: Vec<f64> = vec![0.0; 26];
                 match stat {
                     0 => {
-                        for i in 0..26 {
-                            if pitching(i) {
-                                boosts.push(0.1);
-                            } else {
-                                boosts.push(0.0);
-                            }
+                        //pitching
+                        for i in 8..14 {
+                            boosts[i] = 0.1;
                         }
                     },
                     1 => {
-                        for i in 0..26 {
-                            if batting(i) {
-                                boosts.push(0.1);
-                            } else {
-                                boosts.push(0.0);
-                            }
+                        //batting
+                        for i in 0..8 {
+                            boosts[i] = 0.1;
                         }
                     },
                     2 => {
-                        for i in 0..26 {
-                            if baserunning(i) {
-                                boosts.push(0.1);
-                            } else {
-                                boosts.push(0.0);
-                            }
+                        //defense
+                        for i in 19..24 {
+                            boosts[i] = 0.1;
                         }
                     },
                     3 => {
-                        for i in 0..26 {
-                            if defense(i) {
-                                boosts.push(0.1);
-                            } else {
-                                boosts.push(0.0);
-                            }
+                        //baserunning
+                        for i in 14..19 {
+                            boosts[i] = 0.1;
                         }
                     },
                     _ => {
@@ -346,42 +327,26 @@ impl Event {
                 drainer_mut.boost(&boosts);
 
                 let target_mut = world.player_mut(target);
-                let mut decreases: Vec<f64> = Vec::new();
+                let mut decreases: Vec<f64> = vec![0.0; 26];
                 match stat {
                     0 => {
-                        for i in 0..26 {
-                            if pitching(i) {
-                                decreases.push(-0.1);
-                            } else {
-                                decreases.push(0.0);
-                            }
+                        for i in 8..14 {
+                            boosts[i] = -0.1;
                         }
                     },
                     1 => {
-                        for i in 0..26 {
-                            if batting(i) {
-                                decreases.push(-0.1);
-                            } else {
-                                decreases.push(0.0);
-                            }
+                        for i in 0..8 {
+                            boosts[i] = -0.1;
                         }
                     },
                     2 => {
-                        for i in 0..26 {
-                            if baserunning(i) {
-                                decreases.push(-0.1);
-                            } else {
-                                decreases.push(0.0);
-                            }
+                        for i in 19..24 {
+                            boosts[i] = -0.1;
                         }
                     },
                     3 => {
-                        for i in 0..26 {
-                            if defense(i) {
-                                decreases.push(-0.1);
-                            } else {
-                                decreases.push(0.0);
-                            }
+                        for i in 14..19 {
+                            boosts[i] = -0.1;
                         }
                     },
                     _ => {
