@@ -46,6 +46,8 @@ pub struct Game {
     pub events_inning: u8,
     pub polarity: bool, //false for positive, true for negative
     pub scoring_plays_inning: u8,
+    pub salmon_resets_inning: i16,
+    pub last_salmon_inning: i16,
 
     pub home_team: GameTeam,
     pub away_team: GameTeam,

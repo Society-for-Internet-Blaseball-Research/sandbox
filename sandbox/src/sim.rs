@@ -405,17 +405,24 @@ impl Event {
                 }
             },
             Event::Salmon { home_runs_lost, away_runs_lost } => {
+                if game.last_salmon_inning != game.inning - 1 {
+                    game.salmon_resets_inning = 0;
+                }
                 if away_runs_lost {
-                    game.away_team.score -= game.linescore_away[(game.inning - 1) as usize];
+                    //this whole exercise's goal is
+                    //to find the first instance of the inning
+                    game.away_team.score -= game.linescore_away[game.linescore_away.len() - 1 - (game.salmon_resets_inning as usize)];
                 }
                 if home_runs_lost {
-                    game.home_team.score -= game.linescore_home[(game.inning - 1) as usize];
+                    game.home_team.score -= game.linescore_home[game.linescore_home.len() - 1 - (game.salmon_resets_inning as usize)];
                 }
                 if !game.top {
                     game.top = true
                 } else {
                     game.inning -= 1;
                 }
+                game.salmon_resets_inning += 1;
+                game.last_salmon_inning = game.inning;
             },
             Event::PolaritySwitch => {
                 game.polarity = !game.polarity;
@@ -940,7 +947,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::SunPointOne | Weather::SumSun => None,
             Weather::Night => {
-                if rng.next() < 0.003 { //estimate
+                if rng.next() < 0.0035 { //estimate
                     if rng.next() < 0.5 {
                         let shadows = &world.team(game.batting_team().id).shadows;
                         let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
