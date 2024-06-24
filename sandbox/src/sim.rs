@@ -169,7 +169,7 @@ impl Event {
             }
             Event::Foul => {
                 game.strikes += 1;
-                game.strikes = game.strikes.min(2);
+                game.strikes = game.strikes.min(2); //todo: kid named fourth strike
             }
             Event::Strikeout => {
                 game.outs += 1;
@@ -331,22 +331,22 @@ impl Event {
                 match stat {
                     0 => {
                         for i in 8..14 {
-                            boosts[i] = -0.1;
+                            decreases[i] = -0.1;
                         }
                     },
                     1 => {
                         for i in 0..8 {
-                            boosts[i] = -0.1;
+                            decreases[i] = -0.1;
                         }
                     },
                     2 => {
                         for i in 19..24 {
-                            boosts[i] = -0.1;
+                            decreases[i] = -0.1;
                         }
                     },
                     3 => {
                         for i in 14..19 {
-                            boosts[i] = -0.1;
+                            decreases[i] = -0.1;
                         }
                     },
                     _ => {

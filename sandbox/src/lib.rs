@@ -165,6 +165,7 @@ impl Game {
     }
 
     // todo: all of these are kind of nasty and will borrow all of self and that's usually annoying
+    // note: the alternative is even more annoying
     pub fn pitching_team(&self) -> &GameTeam {
         if self.top {
             &self.home_team
