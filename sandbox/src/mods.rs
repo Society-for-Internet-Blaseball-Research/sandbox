@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // todo: repr u16 for compactness?
 pub enum Mod {
+    TargetedShame,
     Flinch,
 }
 
@@ -45,7 +46,7 @@ impl Mods {
     }
 
     pub fn remove(&mut self, m: Mod) {
-        self.mods.retain(|x| x.the_mod == m)
+        self.mods.retain(|x| x.the_mod != m)
     }
 
     pub fn clear_game(&mut self) {
