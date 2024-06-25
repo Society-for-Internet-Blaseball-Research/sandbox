@@ -44,6 +44,7 @@ impl<'a> Sim<'a> {
 pub enum Event {
     BatterUp {
         batter: Uuid,
+        reverberating: bool
     },
     InningSwitch {
         inning: i16,
@@ -135,8 +136,11 @@ pub enum Event {
 impl Event {
     pub fn apply(&self, game: &mut Game, world: &mut World) {
         match *self {
-            Event::BatterUp { batter } => {
+            Event::BatterUp { batter, reverberating } => {
                 let bt = game.batting_team_mut();
+                if reverberating {
+                    bt.batter_index -= 1;
+                }
                 bt.batter = Some(batter);
             }
             Event::InningSwitch { inning, top } => {
@@ -680,13 +684,19 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
 
 struct BatterStatePlugin;
 impl Plugin for BatterStatePlugin {
-    fn tick(&self, game: &Game, world: &World, _rng: &mut Rng) -> Option<Event> {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         let batting_team = game.batting_team();
         if game.batting_team().batter.is_none() {
             let idx = batting_team.batter_index;
             let team = world.team(batting_team.id);
+            let game_begin = idx == 0;
+            let inning_begin = game.events_inning == 0;
+            let prev = if game_begin { team.lineup[0].clone() } else { team.lineup[(idx - 1) % team.lineup.len()].clone() };
+            if !inning_begin && world.player(prev).mods.has(Mod::Reverberating) && rng.next() < 0.2 { //rough estimate
+                return Some(Event::BatterUp { batter: prev, reverberating: true });
+            }
             let batter = team.lineup[idx % team.lineup.len()].clone();
-            Some(Event::BatterUp { batter })
+            Some(Event::BatterUp { batter, reverberating: false })
         } else {
             None
         }
