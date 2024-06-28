@@ -8,10 +8,10 @@ use sandbox::{
 };
 
 fn main() {
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    //let mut rng = Rng::new(37, 396396396396);
+    let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
@@ -19,7 +19,7 @@ fn main() {
     let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
 
     let mut game = Game {
-        weather: sandbox::Weather::Sun,
+        weather: sandbox::Weather::Eclipse,
         top: true,
         inning: 1,
         home_team: GameTeam {
@@ -49,7 +49,9 @@ fn main() {
         linescore_away: vec![0.0],
     };
 
-    world.player_mut(world.team(team_a).lineup[0]).mods.add(Mod::Reverberating, ModLifetime::Permanent);
+    for i in 0..9 {
+        world.player_mut(world.team(team_a).lineup[i]).mods.add(Mod::Fireproof, ModLifetime::Permanent);
+    }
 
     loop {
         let mut sim = Sim::new(&mut world, &mut rng);

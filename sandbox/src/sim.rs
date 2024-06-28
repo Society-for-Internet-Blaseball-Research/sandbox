@@ -130,6 +130,9 @@ pub enum Event {
         replacement: Uuid,
         replacement_idx: usize,
         boosts: Vec<f64>
+    },
+    Fireproof {
+        target: Uuid,
     }
 }
 
@@ -416,7 +419,8 @@ impl Event {
                     let team_mut = game.pitching_team_mut();
                     team_mut.pitcher = replacement;
                 }
-            }
+            },
+            Event::Fireproof { _target } => {}
         }
     }
 }
@@ -782,6 +786,9 @@ impl Plugin for WeatherPlugin {
                 //todo: add fortification
                 if rng.next() < 0.00045 {
                     let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
+                    if world.player(target).mods.has(Mod::Fireproof) {
+                        return Some(Event::Fireproof { target });
+                    }
                     let replacement = Player::new(rng);
                     return Some(Event::Incineration { 
                         target,

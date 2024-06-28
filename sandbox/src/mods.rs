@@ -4,6 +4,7 @@ pub enum Mod {
     TargetedShame,
     Flinch,
     Reverberating,
+    Fireproof
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

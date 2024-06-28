@@ -144,17 +144,21 @@ impl Game {
             weights.push(weight(eligible_players[i]));
         }
         let weight_sum = weights.iter().sum::<f64>();
+        if weight_sum == 0.0 {
+            panic!("nobody can be chosen");
+        }
+        let last = weights.len() - 1 - weights.iter().rev().take_while(|x| **x == 0.0).collect::<Vec<&f64>>().len();
         let chosen_weight = roll * weight_sum;
 
         let mut counter = 0.0;
         for idx in 0..weights.len() {
-            if chosen_weight < counter {
+            if chosen_weight < counter || idx == last {
                 return eligible_players[idx];
             } else {
                 counter += weights[idx];
             }
         }
-        panic!("what");
+        panic!("what")
     }
 
     pub fn get_run_value(&self) -> f64 {
