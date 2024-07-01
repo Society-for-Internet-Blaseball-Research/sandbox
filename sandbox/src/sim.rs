@@ -277,9 +277,7 @@ impl Event {
                 } else {
                     -0.2
                 };
-                let mut boosts: Vec<f64> = vec![coeff; 26];
-                boosts[5] = -boosts[5];
-                boosts[7] = -boosts[7];
+                let boosts: Vec<f64> = vec![coeff; 26];
                 let player = world.player_mut(target);
                 player.boost(&boosts);
             },
@@ -319,11 +317,7 @@ impl Event {
                     1 => {
                         //batting
                         for i in 0..8 {
-                            if i == 5 || i == 7 {
-                                boosts[i] = -0.1;
-                            } else {
-                                boosts[i] = 0.1;
-                            }
+                            boosts[i] = 0.1;
                         }
                     },
                     2 => {
@@ -353,11 +347,7 @@ impl Event {
                     },
                     1 => {
                         for i in 0..8 {
-                            if i == 5 || i == 7 {
-                                decreases[i] = 0.1;
-                            } else {
-                                decreases[i] = -0.1;
-                            }
+                            decreases[i] = -0.1;
                         }
                     },
                     2 => {

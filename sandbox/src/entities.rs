@@ -237,7 +237,7 @@ impl Player {
         self.musclitude += boosts[4];
         self.patheticism -= boosts[5];
         self.thwackability += boosts[6];
-        self.tragicness += boosts[7];
+        self.tragicness -= boosts[7];
                 
         self.coldness += boosts[8];
         self.overpowerment += boosts[9];
