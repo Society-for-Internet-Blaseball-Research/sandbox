@@ -133,6 +133,10 @@ pub enum Event {
     },
     Fireproof {
         target: Uuid,
+    },
+    Soundproof {
+        resists: Uuid,
+        tangled: Uuid
     }
 }
 
@@ -420,7 +424,8 @@ impl Event {
                     team_mut.pitcher = replacement;
                 }
             },
-            Event::Fireproof { _target } => {}
+            Event::Fireproof { target: _target } => {},
+            Event::Soundproof { resists: _resists, tangled: _tangled } => {} //todo: no idea how to handle tangled
         }
     }
 }
@@ -814,16 +819,40 @@ impl Plugin for WeatherPlugin {
                 let is_batter = rng.next() < (9.0 / 14.0);
                 if rng.next() < 0.0001 {
                     if is_batter {
+                        let target1 = game.batting_team().batter.unwrap();
                         let target2 = game.pick_fielder(world, rng.next());
+                        if world.player(target1).mods.has(Mod::Soundproof) {
+                            return Some(Event::Soundproof {
+                                resists: target1,
+                                tangled: target2
+                            });
+                        } else if world.player(target2).mods.has(Mod::Soundproof) {
+                            return Some(Event::Soundproof {
+                                resists: target2,
+                                tangled: target1
+                            });
+                        }
                         return Some(Event::Feedback {
                             target1: game.batting_team().batter.unwrap(),
                             target2
                         });
                     }
 
+                    let target1 = game.pitching_team().pitcher;
                     let batting_team = world.team(game.batting_team().id);
                     let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
                     let target2 = batting_team.rotation[idx];
+                    if world.player(target1).mods.has(Mod::Soundproof) {
+                        return Some(Event::Soundproof {
+                            resists: target1,
+                            tangled: target2
+                        });
+                    } else if world.player(target2).mods.has(Mod::Soundproof) {
+                        return Some(Event::Soundproof {
+                            resists: target2,
+                            tangled: target1
+                        });
+                    }
                     return Some(Event::Feedback {
                         target1: game.pitching_team().pitcher,
                         target2
