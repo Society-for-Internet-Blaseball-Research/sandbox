@@ -863,7 +863,16 @@ impl Plugin for WeatherPlugin {
             Weather::Reverb => {
                 //estimate
                 if rng.next() < 0.00008 {
-                    let reverb_type = (rng.next() * 4.0).floor() as u8;
+                    let reverb_type_roll = rng.next();
+                    let reverb_type = if reverb_type_roll < 0.09 {
+                        0u8
+                    } else if reverb_type_roll < 0.55 {
+                        1u8
+                    } else if reverb_type_roll < 0.95 {
+                        2u8
+                    } else {
+                        3u8
+                    };
                     let team_id = if rng.next() < 0.5 {
                         game.home_team.id
                     } else {
