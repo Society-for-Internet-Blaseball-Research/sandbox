@@ -136,7 +136,8 @@ pub enum Event {
     },
     Soundproof {
         resists: Uuid,
-        tangled: Uuid
+        tangled: Uuid,
+        decreases: Vec<f64>
     }
 }
 
@@ -425,7 +426,9 @@ impl Event {
                 }
             },
             Event::Fireproof { target: _target } => {},
-            Event::Soundproof { resists: _resists, tangled: _tangled } => {} //todo: no idea how to handle tangled
+            Event::Soundproof { resists: _resists, tangled, ref decreases } => {
+                world.player_mut(tangled).boost(decreases);
+            } //todo: no idea how to handle tangled
         }
     }
 }
@@ -817,19 +820,23 @@ impl Plugin for WeatherPlugin {
             Weather::Birds => None, //lol
             Weather::Feedback => {
                 let is_batter = rng.next() < (9.0 / 14.0);
-                if rng.next() < 0.0001 {
+                if rng.next() < 0.01 {
                     if is_batter {
                         let target1 = game.batting_team().batter.unwrap();
                         let target2 = game.pick_fielder(world, rng.next());
                         if world.player(target1).mods.has(Mod::Soundproof) {
+                            let decreases = roll_random_boosts(rng, -0.05);
                             return Some(Event::Soundproof {
                                 resists: target1,
-                                tangled: target2
+                                tangled: target2,
+                                decreases
                             });
                         } else if world.player(target2).mods.has(Mod::Soundproof) {
+                            let decreases = roll_random_boosts(rng, -0.05);
                             return Some(Event::Soundproof {
                                 resists: target2,
-                                tangled: target1
+                                tangled: target1,
+                                decreases
                             });
                         }
                         return Some(Event::Feedback {
@@ -843,14 +850,18 @@ impl Plugin for WeatherPlugin {
                     let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
                     let target2 = batting_team.rotation[idx];
                     if world.player(target1).mods.has(Mod::Soundproof) {
+                        let decreases = roll_random_boosts(rng, -0.05);
                         return Some(Event::Soundproof {
                             resists: target1,
-                            tangled: target2
+                            tangled: target2,
+                            decreases
                         });
                     } else if world.player(target2).mods.has(Mod::Soundproof) {
+                        let decreases = roll_random_boosts(rng, -0.05);
                         return Some(Event::Soundproof {
                             resists: target2,
-                            tangled: target1
+                            tangled: target1,
+                            decreases
                         });
                     }
                     return Some(Event::Feedback {
@@ -972,25 +983,27 @@ impl Plugin for WeatherPlugin {
                         let shadows = &world.team(game.batting_team().id).shadows;
                         let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
                         let replacement = shadows[replacement_idx as usize];
-                        let mut boosts: Vec<f64> = Vec::new();
-                        for _ in 0..26 {
-                            boosts.push(rng.next() * 0.2);
-                        } //I think this code might be better written
+                        let boosts = roll_random_boosts(rng, 0.2);
                         return Some(Event::NightShift { batter: true, replacement, replacement_idx, boosts });
                     }
                     let shadows = &world.team(game.pitching_team().id).shadows;
                     let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
                     let replacement = shadows[replacement_idx as usize];
-                    let mut boosts: Vec<f64> = Vec::new();
-                    for _ in 0..26 {
-                        boosts.push(rng.next() * 0.2);
-                    }
+                    let boosts = roll_random_boosts(rng, 0.2);
                     return Some(Event::NightShift { batter: false, replacement, replacement_idx, boosts });
                 }
                 None
             }
         }
     }
+}
+
+fn roll_random_boosts(rng: &mut Rng, threshold: f64) -> Vec<f64> {
+    let mut boosts: Vec<f64> = Vec::new();
+    for _ in 0..26 {
+        boosts.push(rng.next() * threshold);
+    }
+    boosts
 }
 
 struct ExtraWeatherPlugin;
