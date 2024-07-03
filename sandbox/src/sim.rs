@@ -98,6 +98,7 @@ pub enum Event {
         target: Uuid,
         yummy: bool
     },
+    Birds,
     Feedback {
         target1: Uuid,
         target2: Uuid,
@@ -138,7 +139,13 @@ pub enum Event {
         resists: Uuid,
         tangled: Uuid,
         decreases: Vec<f64>
-    }
+    },
+    Shelled {
+        batter: Uuid
+    },
+    /*PeckedFree {
+        player: Uuid
+    }*/
 }
 
 impl Event {
@@ -282,6 +289,7 @@ impl Event {
                 let player = world.player_mut(target);
                 player.boost(&boosts);
             },
+            Event::Birds => {},
             Event::Feedback { target1, target2 } => {
                 if let Some(batter) = game.batting_team().batter {
                     if batter == target1 {
@@ -428,7 +436,11 @@ impl Event {
             Event::Fireproof { target: _target } => {},
             Event::Soundproof { resists: _resists, tangled, ref decreases } => {
                 world.player_mut(tangled).boost(decreases);
-            } //todo: no idea how to handle tangled
+            },
+            Event::Shelled { batter: _batter } => {
+                let bt = game.batting_team_mut();
+                bt.batter_index += 1;
+            }
         }
     }
 }
@@ -708,6 +720,9 @@ impl Plugin for BatterStatePlugin {
                 return Some(Event::BatterUp { batter: prev, reverberating: true });
             }
             let batter = team.lineup[idx % team.lineup.len()].clone();
+            if world.player(batter).mods.has(Mod::Shelled) {
+                return Some(Event::Shelled { batter });
+            }
             Some(Event::BatterUp { batter, reverberating: false })
         } else {
             None
@@ -817,7 +832,25 @@ impl Plugin for WeatherPlugin {
                 }
                 None
             },
-            Weather::Birds => None, //lol
+            Weather::Birds => {
+                //rough estimate
+                if rng.next() < 0.025 {
+                    return Some(Event::Birds);
+                } //todo: figure out what order these events go in
+                
+                /*for batter in world.team().lineup {
+                    //estimate
+                    if world.player(batter).mods.has(Mod::Shelled) && rng.next() < 0.0001 {
+                        return Some(Event::PeckedFree { player: batter });
+                    }
+                }
+                for pitcher in world.team().rotation {
+                    if world.player(pitcher).mods.has(Mod::Shelled) && rng.next() < 0.0001 {
+                        return Some(Event::PeckedFree { player: pitcher });
+                    }
+                }*/
+                None
+            },
             Weather::Feedback => {
                 let is_batter = rng.next() < (9.0 / 14.0);
                 if rng.next() < 0.01 {

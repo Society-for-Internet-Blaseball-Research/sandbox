@@ -5,7 +5,8 @@ pub enum Mod {
     Flinch,
     Reverberating,
     Fireproof,
-    Soundproof
+    Soundproof,
+    Shelled
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
