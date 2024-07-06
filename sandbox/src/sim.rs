@@ -853,7 +853,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Feedback => {
                 let is_batter = rng.next() < (9.0 / 14.0);
-                if rng.next() < 0.01 {
+                if rng.next() < 0.0001 {
                     if is_batter {
                         let target1 = game.batting_team().batter.unwrap();
                         let target2 = game.pick_fielder(world, rng.next());
@@ -923,7 +923,22 @@ impl Plugin for WeatherPlugin {
                         game.away_team.id
                     };
 
-                    let changes = world.team(team_id.clone()).roll_reverb_changes(rng, reverb_type);
+                    let mut gravity_players: Vec<usize> = vec![];
+
+                    let team = world.team(team_id.clone());
+
+                    for i in 0..team.lineup.len() {
+                        if world.player(team.lineup[i]).mods.has(Mod::Gravity) {
+                            gravity_players.push(i);
+                        }
+                    }
+                    for i in 0..team.rotation.len() {
+                        if world.player(team.rotation[i]).mods.has(Mod::Gravity) {
+                            gravity_players.push(i + team.lineup.len());
+                        }
+                    } //todo: make this prettier
+
+                    let changes = team.roll_reverb_changes(rng, reverb_type, &gravity_players);
                     
                     return Some(Event::Reverb {
                         reverb_type,

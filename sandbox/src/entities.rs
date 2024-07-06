@@ -301,8 +301,8 @@ impl Team {
     }
 
     //if reverb type is 1 (partial), returns pairs of players to be swapped
-    //if not, returns indexes of slots (rotation lower if reverb type is 1, else lineup lower) in rotation-lineup order
-    pub fn roll_reverb_changes(&self, rng: &mut Rng, reverb_type: u8) -> Vec<usize> {
+    //if not, returns indexes of old slots (lineup lower) in rotation-lineup order
+    pub fn roll_reverb_changes(&self, rng: &mut Rng, reverb_type: u8, gravity_players: &Vec<usize>) -> Vec<usize> {
         let mut reverb_changes = Vec::new();
         let lineup_length = self.lineup.len();
         let rotation_length = self.rotation.len();
@@ -311,48 +311,76 @@ impl Team {
             0 => {
                 let mut players_rem: Vec<usize> = Vec::new(); //tracks players still unsorted
                 for i in 0..length {
-                    players_rem.push(i as usize);
+                    if !gravity_players.contains(&(i as usize)) {
+                        players_rem.push(i as usize);
+                    }
                 }
 
-                for _ in 0..length {
-                    let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
-                    let idx = players_rem[rem_idx];
-                    players_rem.retain(|j| *j != idx);
-                    reverb_changes.push(idx);
+                for i in 0..length {
+                    let old_i: usize = if i < rotation_length { i + lineup_length } else { i - rotation_length };
+                    if gravity_players.contains(&old_i) {
+                        if i < lineup_length {
+                            reverb_changes.push(i + rotation_length);
+                        } else {
+                            reverb_changes.push(i - lineup_length);
+                        }
+                    } else {
+                        let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
+                        let idx = players_rem[rem_idx];
+                        players_rem.retain(|j| *j != idx);
+                        reverb_changes.push(idx);
+                    }
                 }
             },
+            //everything regarding gravity past this line is an assumption
             1 => {
                 for _ in 0..3 {
-                    let idx1 = (rng.next() * (length as f64)).floor() as usize;
-                    let idx2 = (rng.next() * (length as f64)).floor() as usize;
-                    reverb_changes.push(idx1);
-                    reverb_changes.push(idx2);
+                    let roll1 = (rng.next() * (length as f64)).floor() as usize;
+                    let roll2 = (rng.next() * (length as f64)).floor() as usize;
+                    let idx1 = if roll1 < rotation_length { lineup_length + roll1 } else { roll1 - rotation_length };
+                    let idx2 = if roll2 < rotation_length { lineup_length + roll2 } else { roll2 - rotation_length };
+                    if !gravity_players.contains(&idx1) && !gravity_players.contains(&idx2) {
+                        reverb_changes.push(idx1);
+                        reverb_changes.push(idx2);
+                    }
                 }
             },
             2 => {
                 let mut players_rem: Vec<usize> = Vec::new();
                 for i in 0..lineup_length {
-                    players_rem.push(i as usize);
+                    if !gravity_players.contains(&(i as usize)) {
+                        players_rem.push(i as usize);
+                    }
                 }
 
-                for _ in 0..lineup_length {
-                    let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
-                    let idx = players_rem[rem_idx];
-                    players_rem.retain(|j| *j != idx);
-                    reverb_changes.push(idx);
+                for i in 0..lineup_length {
+                    if gravity_players.contains(&(i as usize)) {
+                        reverb_changes.push(i);
+                    } else {
+                        let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
+                        let idx = players_rem[rem_idx];
+                        players_rem.retain(|j| *j != idx);
+                        reverb_changes.push(idx);
+                    }
                 }
             },
             3 => {
                 let mut players_rem: Vec<usize> = Vec::new();
                 for i in 0..rotation_length {
-                    players_rem.push(i as usize);
+                    if !gravity_players.contains(&(i + lineup_length)) {
+                        players_rem.push(i as usize);
+                    }
                 }
 
-                for _ in 0..rotation_length {
-                    let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
-                    let idx = players_rem[rem_idx];
-                    players_rem.retain(|j| *j != idx);
-                    reverb_changes.push(idx);
+                for i in 0..rotation_length {
+                    if gravity_players.contains(&((i + lineup_length) as usize)) {
+                        reverb_changes.push(i);
+                    } else {
+                        let rem_idx = (rng.next() * (players_rem.len() as f64)).floor() as usize;
+                        let idx = players_rem[rem_idx];
+                        players_rem.retain(|j| *j != idx);
+                        reverb_changes.push(idx);
+                    }
                 }
             },
             _ => {
@@ -387,11 +415,11 @@ impl Team {
                 }
             },
             1 => {
-                for i in 0..lineup_length {
-                    result.push(self.lineup[i].clone());
-                }
                 for i in 0..rotation_length {
                     result.push(self.rotation[i].clone());
+                }
+                for i in 0..lineup_length {
+                    result.push(self.lineup[i].clone());
                 }
                 let mut change_idx = 0;
                 while change_idx < changes.len() {

@@ -6,7 +6,8 @@ pub enum Mod {
     Reverberating,
     Fireproof,
     Soundproof,
-    Shelled
+    Shelled,
+    Gravity
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
