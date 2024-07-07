@@ -7,7 +7,8 @@ pub enum Mod {
     Fireproof,
     Soundproof,
     Shelled,
-    Gravity
+    Gravity,
+    FourthStrike
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

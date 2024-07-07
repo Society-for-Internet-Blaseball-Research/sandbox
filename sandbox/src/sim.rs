@@ -470,7 +470,7 @@ struct BasePlugin;
 impl Plugin for BasePlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         let max_balls = 4;
-        let max_strikes = 3;
+        let max_strikes = get_max_strikes(game, world);
         // let max_outs = 3;
 
         let last_strike = (game.strikes + 1) >= max_strikes;
@@ -565,6 +565,18 @@ impl Plugin for BasePlugin {
                 }
             }
         })
+    }
+}
+
+//can we make this a Game instance method? probably not
+pub fn get_max_strikes(game: &Game, world: &World) -> i16 {
+    let batting_team = world.team(game.batting_team().id);
+    let batter_index = game.batting_team().batter_index;
+    let batter = world.player(batting_team.lineup[batter_index % batting_team.lineup.len()]);
+    if batter.mods.has(Mod::FourthStrike) {
+        4
+    } else {
+        3
     }
 }
 
