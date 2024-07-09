@@ -873,7 +873,7 @@ impl Plugin for WeatherPlugin {
                 //todo: add fortification
                 let incin_roll = rng.next();
                 let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
-                if world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.02 {
+                if world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002 { //estimate
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
