@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{bases::Baserunners, entities::{World, Player}, formulas, mods::Mod, rng::Rng, Game, Weather};
+use crate::{bases::Baserunners, entities::{World, Player}, formulas, mods::{Mod, ModLifetime}, rng::Rng, Game, Weather};
 
 pub trait Plugin {
     fn tick(&self, _game: &Game, _world: &World, _rng: &mut Rng) -> Option<Event> {
@@ -14,6 +14,10 @@ pub struct Sim<'a> {
     rng: &'a mut Rng,
 }
 
+//todo: ModPlugin for just the mod effects?
+//but then we have to split mods into categories based on
+//whether they require a roll and their relationship to events
+//which would be a headache
 impl<'a> Sim<'a> {
     pub fn new(world: &'a mut World, rng: &'a mut Rng) -> Sim<'a> {
         Sim {
@@ -24,6 +28,7 @@ impl<'a> Sim<'a> {
                 Box::new(ExtraWeatherPlugin),
                 Box::new(BatterStatePlugin),
                 Box::new(WeatherPlugin),
+                Box::new(ModPlugin),
                 Box::new(StealingPlugin),
                 Box::new(BasePlugin),
             ],
@@ -143,6 +148,15 @@ pub enum Event {
     Shelled {
         batter: Uuid
     },
+    HitByPitch {
+        target: Uuid,
+        hbp_type: u8
+    },
+    IncinerationWithChain {
+        target: Uuid,
+        replacement: Player,
+        chain: Uuid
+    }
     /*PeckedFree {
         player: Uuid
     }*/
@@ -205,7 +219,7 @@ impl Event {
             Event::HomeRun => {
                 let no_runners_on = game.runners.empty();
                 game.runners.advance_all(4);
-                game.batting_team_mut().score += game.get_run_value(); //lazy workaround to score the home run hitter
+                game.batting_team_mut().score += game.get_run_value();
                 game.base_sweep();
                 if no_runners_on {
                     game.scoring_plays_inning += 1;
@@ -440,6 +454,30 @@ impl Event {
             Event::Shelled { batter: _batter } => {
                 let bt = game.batting_team_mut();
                 bt.batter_index += 1;
+            },
+            Event::HitByPitch { target, hbp_type } => {
+                match hbp_type {
+                    0 => {
+                        world.player_mut(target).mods.add(Mod::Unstable, ModLifetime::Week);
+                    },
+                    _ => {}
+                }
+                game.runners.walk();
+                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.base_sweep();
+                game.end_pa();
+            },
+            Event::IncinerationWithChain { target, ref replacement, chain } => {
+                let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
+                if let Some(batter) = game.batting_team().batter {
+                    if batter == target {
+                        game.batting_team_mut().batter = Some(replacement_id);
+                    }
+                } else if target == game.pitching_team().pitcher {
+                    game.pitching_team_mut().pitcher = replacement_id;
+                }
+                world.replace_player(target, replacement_id);
+                world.player_mut(chain).mods.add(Mod::Unstable, ModLifetime::Week);
             }
         }
     }
@@ -570,9 +608,7 @@ impl Plugin for BasePlugin {
 
 //can we make this a Game instance method? probably not
 pub fn get_max_strikes(game: &Game, world: &World) -> i16 {
-    let batting_team = world.team(game.batting_team().id);
-    let batter_index = game.batting_team().batter_index;
-    let batter = world.player(batting_team.lineup[batter_index % batting_team.lineup.len()]);
+    let batter = world.player(game.batting_team().batter.unwrap());
     if batter.mods.has(Mod::FourthStrike) {
         4
     } else {
@@ -812,6 +848,22 @@ impl Plugin for StealingPlugin {
     }
 }
 
+fn poll_for_mod(game: &Game, world: &World, a_mod: Mod) -> Vec<Uuid> {
+    let batting_team = game.batting_team();
+    let pitching_team = game.pitching_team();
+
+    let bat_lineup = world.team(batting_team.id).lineup.clone();
+    let bat_pitcher = vec![batting_team.pitcher.clone()];
+    let pitch_lineup = world.team(pitching_team.id).lineup.clone();
+    let pitch_pitcher = vec![pitching_team.pitcher.clone()];
+
+    let mut players = vec![bat_lineup, bat_pitcher, pitch_lineup, pitch_pitcher].concat();
+
+    players.retain(|player| world.player(*player).mods.has(a_mod));
+
+    players
+}
+
 struct WeatherPlugin;
 impl Plugin for WeatherPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
@@ -819,8 +871,24 @@ impl Plugin for WeatherPlugin {
             Weather::Sun => None,
             Weather::Eclipse => {
                 //todo: add fortification
-                if rng.next() < 0.00045 {
-                    let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
+                let incin_roll = rng.next();
+                let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
+                if world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.02 {
+                    if world.player(target).mods.has(Mod::Fireproof) {
+                        return Some(Event::Fireproof { target });
+                    }
+                    let chain = game.pick_player_weighted(world, rng.next(), |uuid| if world.player(uuid).team.unwrap() == world.player(target).team.unwrap() {
+                        0.0
+                    } else {
+                        1.0
+                    }, false);
+                    let replacement = Player::new(rng);
+                    return Some(Event::IncinerationWithChain { 
+                        target,
+                        replacement,
+                        chain
+                    });
+                } else if incin_roll < 0.00045 {
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
@@ -1094,6 +1162,20 @@ impl Plugin for ExtraWeatherPlugin {
                 }
             }
             return None;
+        }
+        None
+    }
+}
+
+struct ModPlugin;
+impl Plugin for ModPlugin {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        let batter = game.batting_team().batter.unwrap();
+        let batter_mods = &world.player(batter).mods;
+        let pitcher = game.pitching_team().pitcher;
+        let pitcher_mods = &world.player(pitcher).mods;
+        if pitcher_mods.has(Mod::DebtU) && !batter_mods.has(Mod::Unstable) && rng.next() < 0.02 { //estimate
+            return Some(Event::HitByPitch { target: batter, hbp_type: 0 });
         }
         None
     }

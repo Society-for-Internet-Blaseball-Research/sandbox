@@ -18,6 +18,8 @@ fn main() {
     let team_a = world.gen_team(&mut rng, "Team A".to_string(), "A".to_string());
     let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
 
+    world.player_mut(world.team(team_a).rotation[0]).mods.add(Mod::DebtU, ModLifetime::Permanent);
+
     let mut game = Game {
         weather: sandbox::Weather::Eclipse,
         top: true,
@@ -48,10 +50,6 @@ fn main() {
         linescore_home: vec![0.0],
         linescore_away: vec![0.0],
     };
-
-    for i in 0..9 {
-        world.player_mut(world.team(team_a).lineup[i]).mods.add(Mod::Fireproof, ModLifetime::Permanent);
-    }
 
     loop {
         let mut sim = Sim::new(&mut world, &mut rng);

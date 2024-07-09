@@ -8,7 +8,9 @@ pub enum Mod {
     Soundproof,
     Shelled,
     Gravity,
-    FourthStrike
+    FourthStrike,
+    DebtU,
+    Unstable
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
