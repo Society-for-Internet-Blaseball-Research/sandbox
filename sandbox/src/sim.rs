@@ -914,7 +914,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Birds => {
                 //rough estimate
-                if rng.next() < 0.025 {
+                if rng.next() < 0.008 {
                     return Some(Event::Birds);
                 } //todo: figure out what order these events go in
                 
@@ -986,7 +986,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Reverb => {
                 //estimate
-                if rng.next() < 0.00008 {
+                if rng.next() < 0.00003 {
                     let reverb_type_roll = rng.next();
                     let reverb_type = if reverb_type_roll < 0.09 {
                         0u8
@@ -1106,7 +1106,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::SunPointOne | Weather::SumSun => None,
             Weather::Night => {
-                if rng.next() < 0.0035 { //estimate
+                if rng.next() < 0.001 { //estimate
                     if rng.next() < 0.5 {
                         let shadows = &world.team(game.batting_team().id).shadows;
                         let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
