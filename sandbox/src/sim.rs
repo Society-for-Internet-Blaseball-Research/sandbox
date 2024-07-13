@@ -14,10 +14,6 @@ pub struct Sim<'a> {
     rng: &'a mut Rng,
 }
 
-//todo: ModPlugin for just the mod effects?
-//but then we have to split mods into categories based on
-//whether they require a roll and their relationship to events
-//which would be a headache
 impl<'a> Sim<'a> {
     pub fn new(world: &'a mut World, rng: &'a mut Rng) -> Sim<'a> {
         Sim {
@@ -156,10 +152,10 @@ pub enum Event {
         target: Uuid,
         replacement: Player,
         chain: Uuid
-    }
-    /*PeckedFree {
+    },
+    PeckedFree {
         player: Uuid
-    }*/
+    }
 }
 
 impl Event {
@@ -478,10 +474,31 @@ impl Event {
                 }
                 world.replace_player(target, replacement_id);
                 world.player_mut(chain).mods.add(Mod::Unstable, ModLifetime::Week);
+            },
+            Event::PeckedFree { player } => {
+                world.player_mut(player).mods.remove(Mod::Shelled);
             }
         }
     }
 }
+
+/*fn upgrade_spicy(game: &mut Game, world: &mut World) {
+    let batter = world.player(game.batting_team().batter.unwrap());
+    if !batter.last_pa_is_hit {
+        batter.last_pa_is_hit = true;
+    } else if batter.last_pa_is_hit && batter.mods.has(Mod::Spicy) {
+        batter.mods.add(Mod::HeatingUp, ModLifetime::Game);
+    } else if batter.mods.has(Mod::HeatingUp) {
+        batter.mods.remove(Mod::HeatingUp);
+        if batter.last_pa_is_hit {
+            batter.mods.add(Mod::RedHot, ModLifetime::Game);
+        }
+    } else if !batter_last_pa_is_hit && batter.mods.has(Mod::RedHot) {
+        batter.mods.remove(Mod::HeatingUp);
+    } else {
+        batter.last_pa_is_hit = false;
+    }
+}*/
 
 enum PitchOutcome {
     Ball,
@@ -848,16 +865,16 @@ impl Plugin for StealingPlugin {
     }
 }
 
-fn poll_for_mod(game: &Game, world: &World, a_mod: Mod) -> Vec<Uuid> {
-    let batting_team = game.batting_team();
-    let pitching_team = game.pitching_team();
+fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, only_current: bool) -> Vec<Uuid> {
+    let home_team = &game.home_team;
+    let away_team = &game.away_team;
 
-    let bat_lineup = world.team(batting_team.id).lineup.clone();
-    let bat_pitcher = vec![batting_team.pitcher.clone()];
-    let pitch_lineup = world.team(pitching_team.id).lineup.clone();
-    let pitch_pitcher = vec![pitching_team.pitcher.clone()];
+    let home_lineup = world.team(home_team.id).lineup.clone();
+    let home_pitcher = if only_current { vec![home_team.pitcher.clone()] } else { world.team(home_team.id).rotation.clone() };
+    let away_lineup = world.team(away_team.id).lineup.clone();
+    let away_pitcher = if only_current { vec![away_team.pitcher.clone()] } else { world.team(away_team.id).rotation.clone() };
 
-    let mut players = vec![bat_lineup, bat_pitcher, pitch_lineup, pitch_pitcher].concat();
+    let mut players = vec![home_lineup, home_pitcher, away_lineup, away_pitcher].concat();
 
     players.retain(|player| world.player(*player).mods.has(a_mod));
 
@@ -914,21 +931,17 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Birds => {
                 //rough estimate
-                if rng.next() < 0.008 {
+                if rng.next() < 0.003 {
                     return Some(Event::Birds);
                 } //todo: figure out what order these events go in
                 
-                /*for batter in world.team().lineup {
-                    //estimate
-                    if world.player(batter).mods.has(Mod::Shelled) && rng.next() < 0.0001 {
-                        return Some(Event::PeckedFree { player: batter });
+                let shelled_players = poll_for_mod(game, world, Mod::Shelled, false);
+                for player in shelled_players {
+                    //estimate, not sure how accurate this is
+                    if rng.next() < 0.00015 {
+                        return Some(Event::PeckedFree { player });
                     }
                 }
-                for pitcher in world.team().rotation {
-                    if world.player(pitcher).mods.has(Mod::Shelled) && rng.next() < 0.0001 {
-                        return Some(Event::PeckedFree { player: pitcher });
-                    }
-                }*/
                 None
             },
             Weather::Feedback => {

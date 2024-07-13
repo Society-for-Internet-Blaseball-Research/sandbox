@@ -148,6 +148,8 @@ pub struct Player {
     pub mods: Mods,
     pub team: Option<Uuid>, //ig
 
+    pub last_pa_is_hit: bool, //todo: we need to store previous events somewhere
+
     // stats??
     // todo: maybe represent stats with an array
     // to make rolling new players less awkward
@@ -192,6 +194,8 @@ impl Player {
             name: "".to_string(), //todo: name gen
             mods: Mods::new(),
             team: None,
+
+            last_pa_is_hit: false,
 
             // this is not rng order compatible
             buoyancy: rng.next(),

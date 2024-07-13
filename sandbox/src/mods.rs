@@ -10,7 +10,11 @@ pub enum Mod {
     Gravity,
     FourthStrike,
     DebtU,
-    Unstable
+    Unstable,
+    Superallergic,
+    /*Spicy,
+    HeatingUp,
+    RedHot,*/
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
