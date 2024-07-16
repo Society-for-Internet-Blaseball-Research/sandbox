@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, f64::consts::PI};
 
 use uuid::Uuid;
 
-use crate::{mods::Mods, rng::Rng};
+use crate::{events::Events, mods::Mods, rng::Rng};
 
 pub struct World {
     pub players: BTreeMap<Uuid, Player>,
@@ -147,8 +147,8 @@ pub struct Player {
     pub name: String,
     pub mods: Mods,
     pub team: Option<Uuid>, //ig
-
-    pub last_pa_is_hit: bool, //todo: we need to store previous events somewhere
+    
+    pub feed: Events,
 
     // stats??
     // todo: maybe represent stats with an array
@@ -195,7 +195,7 @@ impl Player {
             mods: Mods::new(),
             team: None,
 
-            last_pa_is_hit: false,
+            feed: Events::new(),
 
             // this is not rng order compatible
             buoyancy: rng.next(),

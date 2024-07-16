@@ -1,7 +1,7 @@
 use bases::Baserunners;
 use entities::World;
 use uuid::Uuid;
-use sim::Event;
+use events::Events;
 
 pub mod bases;
 pub mod entities;
@@ -9,6 +9,7 @@ pub mod formulas;
 pub mod mods;
 pub mod rng;
 pub mod sim;
+pub mod events;
 
 #[derive(Clone, Debug)]
 pub enum Weather {
@@ -44,13 +45,11 @@ pub struct Game {
     pub strikes: i16,
     pub outs: i16,
 
-    pub events_inning: u8,
     pub polarity: bool, //false for positive, true for negative
     pub scoring_plays_inning: u8,
     pub salmon_resets_inning: i16,
-    pub last_salmon_inning: i16,
 
-    //pub events: Events,
+    pub events: Events,
 
     pub home_team: GameTeam,
     pub away_team: GameTeam,
@@ -59,11 +58,6 @@ pub struct Game {
 
     pub linescore_home: Vec<f64>, //for salmon purposes
     pub linescore_away: Vec<f64>, //the first element is the total score
-}
-
-#[derive(Clone, Debug)]
-pub struct Events {
-    event_list: Vec<Event>
 }
 
 #[derive(Clone, Debug)]
@@ -210,25 +204,3 @@ impl Game {
         }
     }
 }
-
-/*impl Events {
-    fn new() -> Events {
-        Events {
-            event_list: Vec::new()
-        }
-    }
-    fn add(&mut self, event: &Event) {
-        self.event_list.push(event.clone());
-    }
-    fn last(&self) -> &Event {
-        self.event_list.last().unwrap()
-    }
-    fn last_and(&self, allowed: Vec<Event>) -> Option<Event> {
-        let last = self.event_list.last().unwrap();
-        if allowed.contains(last) {
-            Some(last.clone())
-        } else {
-            None
-        }
-    }
-}*/
