@@ -41,24 +41,6 @@ impl<'a> Sim<'a> {
     }
 }
 
-/*fn upgrade_spicy(game: &mut Game, world: &mut World) {
-    let batter = world.player(game.batting_team().batter.unwrap());
-    if !batter.last_pa_is_hit {
-        batter.last_pa_is_hit = true;
-    } else if batter.last_pa_is_hit && batter.mods.has(Mod::Spicy) {
-        batter.mods.add(Mod::HeatingUp, ModLifetime::Game);
-    } else if batter.mods.has(Mod::HeatingUp) {
-        batter.mods.remove(Mod::HeatingUp);
-        if batter.last_pa_is_hit {
-            batter.mods.add(Mod::RedHot, ModLifetime::Game);
-        }
-    } else if !batter_last_pa_is_hit && batter.mods.has(Mod::RedHot) {
-        batter.mods.remove(Mod::HeatingUp);
-    } else {
-        batter.last_pa_is_hit = false;
-    }
-}*/
-
 enum PitchOutcome {
     Ball,
     StrikeSwinging,

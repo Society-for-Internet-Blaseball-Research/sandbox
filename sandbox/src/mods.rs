@@ -12,9 +12,9 @@ pub enum Mod {
     DebtU,
     Unstable,
     Superallergic,
-    /*Spicy,
+    Spicy,
     HeatingUp,
-    RedHot,*/
+    RedHot,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

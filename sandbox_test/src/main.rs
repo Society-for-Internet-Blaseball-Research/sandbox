@@ -19,7 +19,9 @@ fn main() {
     let team_a = world.gen_team(&mut rng, "Team A".to_string(), "A".to_string());
     let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
 
-    //world.player_mut(world.team(team_a).lineup[0]).mods.add(Mod::Shelled, ModLifetime::Permanent);
+    for i in 0..9 {
+        world.player_mut(world.team(team_a).lineup[i]).mods.add(Mod::Spicy, ModLifetime::Permanent);
+    }
 
     let mut game = Game {
         weather: sandbox::Weather::Salmon,

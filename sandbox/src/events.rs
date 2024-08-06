@@ -178,6 +178,7 @@ impl Event {
             }
             Event::HomeRun => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                upgrade_spicy(game, world);
                 let no_runners_on = game.runners.empty();
                 game.runners.advance_all(4);
                 game.batting_team_mut().score += game.get_run_value();
@@ -192,6 +193,7 @@ impl Event {
                 ref runners_after,
             } => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                upgrade_spicy(game, world);
                 game.runners = runners_after.clone();
                 game.base_sweep();
                 game.runners
@@ -203,6 +205,7 @@ impl Event {
                 ref runners_after,
             } => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.base_sweep();
@@ -213,6 +216,7 @@ impl Event {
                 ref runners_after,
             } => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.base_sweep();
@@ -220,6 +224,7 @@ impl Event {
             }
             Event::DoublePlay { ref runners_after } => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                downgrade_spicy(game, world);
                 game.outs += 2;
                 game.runners = runners_after.clone();
                 game.base_sweep();
@@ -227,6 +232,7 @@ impl Event {
             }
             Event::FieldersChoice { ref runners_after } => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.runners.add(0, game.batting_team().batter.unwrap());
@@ -495,6 +501,26 @@ impl Event {
     }
 }
 
+
+fn upgrade_spicy(game: &mut Game, world: &mut World) {
+    let batter = world.player_mut(game.batting_team().batter.unwrap());
+    if batter.mods.has(Mod::Spicy) && batter.feed.streak_multiple(vec![String::from("baseHit"), String::from("homeRun")], -1) == 2 {
+        batter.mods.add(Mod::HeatingUp, ModLifetime::Permanent);
+    } else if batter.mods.has(Mod::HeatingUp) {
+        batter.mods.remove(Mod::HeatingUp);
+        batter.mods.add(Mod::RedHot, ModLifetime::Permanent);
+    }
+}
+
+fn downgrade_spicy(game: &mut Game, world: &mut World) {
+     let batter = world.player_mut(game.batting_team().batter.unwrap());
+     if batter.mods.has(Mod::RedHot) {
+         batter.mods.remove(Mod::RedHot);
+     } else if batter.mods.has(Mod::HeatingUp) {
+         batter.mods.remove(Mod::HeatingUp);
+     }
+}
+
 #[derive(Clone, Debug)]
 pub struct Events {
     events: Vec<String>
@@ -546,6 +572,27 @@ impl Events {
                     return counter;
                 }
             }
+        }
+        counter
+    }
+    pub fn streak_multiple(&self, strvec: Vec<String>, limit: i16) -> u8 {
+        let mut half_innings = 0i16;
+        let mut counter = 0u8;
+        for ev in self.events.iter().rev() {
+            if *ev == "inningSwitch" && limit != -1 {
+                if half_innings < limit {
+                    half_innings += 1;
+                } else {
+                    return counter;
+                }
+            } else {
+		//contains doesn't work
+		for s in &strvec {
+		    if *ev == *s {
+			counter += 1;
+		    }
+		}
+	    }
         }
         counter
     }
