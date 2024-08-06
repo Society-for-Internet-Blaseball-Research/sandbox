@@ -326,7 +326,6 @@ impl Plugin for BatterStatePlugin {
             } else {
                 false
             };
-            println!("{}", game.events.len());
             let inning_begin = !first_batter && game.events.last() == "inningSwitch";
             let prev = if first_batter { team.lineup[0].clone() } else { team.lineup[(idx - 1) % team.lineup.len()].clone() };
             if !first_batter && !inning_begin && world.player(prev).mods.has(Mod::Reverberating) && rng.next() < 0.2 { //rough estimate
@@ -702,8 +701,6 @@ impl Plugin for ExtraWeatherPlugin {
             let away_team_scored = game.linescore_away.last().unwrap().abs() > 0.01;
             let home_team_scored = if !game.top { false } else { game.linescore_home.last().unwrap().abs() > 0.01 };
             if game.events.len() > 0 && game.events.last() == "inningSwitch" && (away_team_scored || home_team_scored) {
-                println!("{}", away_team_scored);
-                println!("{}", home_team_scored);
                 let salmon_activated = rng.next() < 0.1375;
                 if salmon_activated {
                     let runs_lost = rng.next() < 0.675; //rough estimate

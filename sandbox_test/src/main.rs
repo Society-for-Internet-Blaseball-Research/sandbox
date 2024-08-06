@@ -23,8 +23,12 @@ fn main() {
         world.player_mut(world.team(team_a).lineup[i]).mods.add(Mod::Spicy, ModLifetime::Permanent);
     }
 
+    for i in 0..9 {
+        world.player_mut(world.team(team_b).lineup[i]).mods.add(Mod::Spicy, ModLifetime::Permanent);
+    }
+
     let mut game = Game {
-        weather: sandbox::Weather::Salmon,
+        weather: sandbox::Weather::Sun,
         top: true,
         inning: 1,
         home_team: GameTeam {

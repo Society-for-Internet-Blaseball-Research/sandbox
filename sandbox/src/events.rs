@@ -504,7 +504,7 @@ impl Event {
 
 fn upgrade_spicy(game: &mut Game, world: &mut World) {
     let batter = world.player_mut(game.batting_team().batter.unwrap());
-    if batter.mods.has(Mod::Spicy) && batter.feed.streak_multiple(vec![String::from("baseHit"), String::from("homeRun")], -1) == 2 {
+    if batter.mods.has(Mod::Spicy) && batter.feed.streak_multiple(vec![String::from("baseHit"), String::from("homeRun")], -1) == 1 {
         batter.mods.add(Mod::HeatingUp, ModLifetime::Permanent);
     } else if batter.mods.has(Mod::HeatingUp) {
         batter.mods.remove(Mod::HeatingUp);
