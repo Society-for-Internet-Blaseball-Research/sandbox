@@ -734,7 +734,11 @@ impl Plugin for ModPlugin {
         let batter_mods = &world.player(batter).mods;
         let pitcher = game.pitching_team().pitcher;
         let pitcher_mods = &world.player(pitcher).mods;
-        if pitcher_mods.has(Mod::DebtU) && !batter_mods.has(Mod::Unstable) && rng.next() < 0.02 { //estimate
+        if batter_mods.has(Mod::Electric) && game.strikes > 0 && rng.next() < 0.2 {
+            return Some(Event::Zap { batter: true });
+        } else if pitcher_mods.has(Mod::Electric) && game.balls > 0 && rng.next() < 0.2 {
+            return Some(Event::Zap { batter: false });
+        } else if pitcher_mods.has(Mod::DebtU) && !batter_mods.has(Mod::Unstable) && rng.next() < 0.02 { //estimate
             return Some(Event::HitByPitch { target: batter, hbp_type: 0 });
         }
         None

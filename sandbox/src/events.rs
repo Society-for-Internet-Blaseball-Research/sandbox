@@ -116,6 +116,9 @@ pub enum Event {
     },
     PeckedFree {
         player: Uuid
+    },
+    Zap {
+        batter: bool
     }
 }
 
@@ -453,6 +456,13 @@ impl Event {
             Event::PeckedFree { player } => {
                 world.player_mut(player).mods.remove(Mod::Shelled);
                 world.player_mut(player).mods.add(Mod::Superallergic, ModLifetime::Permanent);
+            },
+            Event::Zap { batter } => {
+                if batter {
+                    game.strikes -= 1;
+                } else {
+                    game.balls -= 1;
+                }
             }
         }
     }
@@ -495,7 +505,8 @@ impl Event {
             Event::Shelled { .. } => "shelled",
             Event::HitByPitch { .. } => "hitByPitch",
             Event::IncinerationWithChain { .. } => "incinerationWithChain",
-            Event::PeckedFree { .. } => "peckedFree"
+            Event::PeckedFree { .. } => "peckedFree",
+            Event::Zap { .. } => "zap"
         };
         String::from(ev)
     }
