@@ -430,12 +430,12 @@ impl Event {
                 bt.batter_index += 1;
             },
             Event::HitByPitch { target, hbp_type } => {
-                match hbp_type {
-                    0 => {
-                        world.player_mut(target).mods.add(Mod::Unstable, ModLifetime::Week);
-                    },
-                    _ => {}
-                }
+                let effect = match hbp_type {
+                    0 => Some(Mod::Unstable),
+                    1 => Some(Mod::Flickering),
+                    _ => None
+                };
+                world.player_mut(target).mods.add(effect.unwrap(), ModLifetime::Week);
                 game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
                 game.base_sweep();

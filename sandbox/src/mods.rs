@@ -15,7 +15,9 @@ pub enum Mod {
     Spicy,
     HeatingUp,
     RedHot,
-    Electric
+    Electric,
+    RefinancedDebt,
+    Flickering
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
