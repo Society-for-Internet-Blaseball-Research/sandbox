@@ -447,34 +447,36 @@ impl Plugin for WeatherPlugin {
                         1.0
                     }, false);
                     let replacement = Player::new(rng);
-                    return Some(Event::IncinerationWithChain { 
+                    Some(Event::IncinerationWithChain { 
                         target,
                         replacement,
                         chain
-                    });
+                    })
                 } else if incin_roll < 0.00045 {
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
                     let replacement = Player::new(rng);
-                    return Some(Event::Incineration { 
+                    Some(Event::Incineration { 
                         target,
                         replacement
-                    });
+                    })
+                } else {
+                    None
                 }
-                None
             },
             Weather::Peanuts => {
                 if rng.next() < 0.0006 {
                     //idk if runners can have a reaction
                     //but this is assuming it's the same as incins
                     let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
-                    return Some(Event::Peanut {
+                    Some(Event::Peanut {
                         target,
                         yummy: false
-                    });
+                    })
+                } else {
+                    None
                 }
-                None
             },
             Weather::Birds => {
                 //rough estimate
@@ -501,96 +503,101 @@ impl Plugin for WeatherPlugin {
                     let target2 = game.pick_fielder(world, rng.next());
                     if world.player(batter).mods.has(Mod::Soundproof) {
                         let decreases = roll_random_boosts(rng, -0.05);
-                        return Some(Event::Soundproof {
+                        Some(Event::Soundproof {
                             resists: batter,
                             tangled: target2,
                             decreases
-                        });
+                        })
                     } else if world.player(target2).mods.has(Mod::Soundproof) {
                         let decreases = roll_random_boosts(rng, -0.05);
-                        return Some(Event::Soundproof {
+                        Some(Event::Soundproof {
                             resists: target2,
                             tangled: batter,
                             decreases
-                        });
+                        })
+                    } else {
+                        Some(Event::Feedback {
+                            target1: game.batting_team().batter.unwrap(),
+                            target2
+                        })
                     }
-                    return Some(Event::Feedback {
-                        target1: game.batting_team().batter.unwrap(),
-                        target2
-                    });
                 } else if !is_batter && world.player(pitcher).mods.has(Mod::Flickering) && feedback_roll < 0.02 {
                     let batting_team = world.team(game.batting_team().id);
                     let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
                     let target2 = batting_team.rotation[idx];
                     if world.player(pitcher).mods.has(Mod::Soundproof) {
                         let decreases = roll_random_boosts(rng, -0.05);
-                        return Some(Event::Soundproof {
+                        Some(Event::Soundproof {
                             resists: pitcher,
                             tangled: target2,
                             decreases
-                        });
+                        })
                     } else if world.player(target2).mods.has(Mod::Soundproof) {
                         let decreases = roll_random_boosts(rng, -0.05);
-                        return Some(Event::Soundproof {
+                        Some(Event::Soundproof {
                             resists: target2,
                             tangled: pitcher,
                             decreases
-                        });
+                        })
+                    } else {
+                        Some(Event::Feedback {
+                            target1: game.pitching_team().pitcher,
+                            target2
+                        })
                     }
-                    return Some(Event::Feedback {
-                        target1: game.pitching_team().pitcher,
-                        target2
-                    });
                 } else if feedback_roll < 0.0001 {
                     if is_batter {
                         let target1 = game.batting_team().batter.unwrap();
                         let target2 = game.pick_fielder(world, rng.next());
                         if world.player(target1).mods.has(Mod::Soundproof) {
                             let decreases = roll_random_boosts(rng, -0.05);
-                            return Some(Event::Soundproof {
+                            Some(Event::Soundproof {
                                 resists: target1,
                                 tangled: target2,
                                 decreases
-                            });
+                            })
                         } else if world.player(target2).mods.has(Mod::Soundproof) {
                             let decreases = roll_random_boosts(rng, -0.05);
-                            return Some(Event::Soundproof {
+                            Some(Event::Soundproof {
                                 resists: target2,
                                 tangled: target1,
                                 decreases
-                            });
+                            })
+                        } else {
+                            Some(Event::Feedback {
+                                target1: game.batting_team().batter.unwrap(),
+                                target2
+                            })
                         }
-                        return Some(Event::Feedback {
-                            target1: game.batting_team().batter.unwrap(),
-                            target2
-                        });
+                    } else {
+                        let target1 = game.pitching_team().pitcher;
+                        let batting_team = world.team(game.batting_team().id);
+                        let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
+                        let target2 = batting_team.rotation[idx];
+                        if world.player(target1).mods.has(Mod::Soundproof) {
+                            let decreases = roll_random_boosts(rng, -0.05);
+                            Some(Event::Soundproof {
+                                resists: target1,
+                                tangled: target2,
+                                decreases
+                            })
+                        } else if world.player(target2).mods.has(Mod::Soundproof) {
+                            let decreases = roll_random_boosts(rng, -0.05);
+                            Some(Event::Soundproof {
+                                resists: target2,
+                                tangled: target1,
+                                decreases
+                            })
+                        } else {
+                            Some(Event::Feedback {
+                                target1: game.pitching_team().pitcher,
+                                target2
+                            })
+                        }
                     }
-
-                    let target1 = game.pitching_team().pitcher;
-                    let batting_team = world.team(game.batting_team().id);
-                    let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
-                    let target2 = batting_team.rotation[idx];
-                    if world.player(target1).mods.has(Mod::Soundproof) {
-                        let decreases = roll_random_boosts(rng, -0.05);
-                        return Some(Event::Soundproof {
-                            resists: target1,
-                            tangled: target2,
-                            decreases
-                        });
-                    } else if world.player(target2).mods.has(Mod::Soundproof) {
-                        let decreases = roll_random_boosts(rng, -0.05);
-                        return Some(Event::Soundproof {
-                            resists: target2,
-                            tangled: target1,
-                            decreases
-                        });
-                    }
-                    return Some(Event::Feedback {
-                        target1: game.pitching_team().pitcher,
-                        target2
-                    });
+                } else {
+                    None
                 }
-                None
             },
             Weather::Reverb => {
                 //estimate
@@ -628,13 +635,14 @@ impl Plugin for WeatherPlugin {
 
                     let changes = team.roll_reverb_changes(rng, reverb_type, &gravity_players);
                     
-                    return Some(Event::Reverb {
+                    Some(Event::Reverb {
                         reverb_type,
                         team: team_id,
                         changes
-                    });
+                    })
+                } else {
+                    None
                 }
-                None
             },
             Weather::Blooddrain => {
                 if rng.next() < 0.00065 {
@@ -642,21 +650,21 @@ impl Plugin for WeatherPlugin {
                     let is_atbat = rng.next() < 0.5;
                     if is_atbat {
                         if fielding_team_drains {
-                            return Some(Event::Blooddrain {
+                            Some(Event::Blooddrain {
                                 drainer: game.pitching_team().pitcher,
                                 target: game.batting_team().batter.unwrap(),
                                 stat: (rng.next() * 4.0).floor() as u8,
                                 siphon: false,
                                 siphon_effect: -1
-                            });
+                            })
                         } else {
-                            return Some(Event::Blooddrain {
+                            Some(Event::Blooddrain {
                                 drainer: game.batting_team().batter.unwrap(),
                                 target: game.pitching_team().pitcher,
                                 stat: (rng.next() * 4.0).floor() as u8,
                                 siphon: false,
                                 siphon_effect: -1
-                            });
+                            })
                         }
                     } else {
                         let fielder_roll = rng.next();
@@ -667,25 +675,26 @@ impl Plugin for WeatherPlugin {
                             game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batting_team().batter.unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
                         };
                         if fielding_team_drains {
-                            return Some(Event::Blooddrain {
+                            Some(Event::Blooddrain {
                                 drainer: fielder,
                                 target: hitter,
                                 stat: (rng.next() * 4.0).floor() as u8,
                                 siphon: false,
                                 siphon_effect: -1
-                            });
+                            })
                         } else {
-                            return Some(Event::Blooddrain {
+                            Some(Event::Blooddrain {
                                 drainer: hitter,
                                 target: fielder,
                                 stat: (rng.next() * 4.0).floor() as u8,
                                 siphon: false,
                                 siphon_effect: -1
-                            });
+                            })
                         }
                     }
+                } else {
+                    None
                 }
-                None
             },
             Weather::Sun2 => {
                 if game.home_team.score - 10.0 >= -0.001 { //ugh
@@ -708,9 +717,10 @@ impl Plugin for WeatherPlugin {
             Weather::Salmon => None,
             Weather::PolarityPlus | Weather::PolarityMinus => {
                 if rng.next() < 0.035 {
-                    return Some(Event::PolaritySwitch);
+                    Some(Event::PolaritySwitch)
+                } else {
+                    None
                 }
-                None
             },
             Weather::SunPointOne | Weather::SumSun => None,
             Weather::Night => {
@@ -720,15 +730,17 @@ impl Plugin for WeatherPlugin {
                         let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
                         let replacement = shadows[replacement_idx as usize];
                         let boosts = roll_random_boosts(rng, 0.2);
-                        return Some(Event::NightShift { batter: true, replacement, replacement_idx, boosts });
+                        Some(Event::NightShift { batter: true, replacement, replacement_idx, boosts })
+                    } else {
+                        let shadows = &world.team(game.pitching_team().id).shadows;
+                        let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
+                        let replacement = shadows[replacement_idx as usize];
+                        let boosts = roll_random_boosts(rng, 0.2);
+                        Some(Event::NightShift { batter: false, replacement, replacement_idx, boosts })
                     }
-                    let shadows = &world.team(game.pitching_team().id).shadows;
-                    let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
-                    let replacement = shadows[replacement_idx as usize];
-                    let boosts = roll_random_boosts(rng, 0.2);
-                    return Some(Event::NightShift { batter: false, replacement, replacement_idx, boosts });
+                } else {
+                    None
                 }
-                None
             }
         }
     }
