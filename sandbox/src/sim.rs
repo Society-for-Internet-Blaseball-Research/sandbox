@@ -441,12 +441,13 @@ impl Plugin for WeatherPlugin {
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
-                    let chain = game.pick_player_weighted(world, rng.next(), |uuid| if world.player(uuid).team.unwrap() == world.player(target).team.unwrap() {
+                    let chain_target = game.pick_player_weighted(world, rng.next(), |uuid| if world.player(uuid).team.unwrap() == world.player(target).team.unwrap() {
                         0.0
                     } else {
                         1.0
                     }, false);
-                    let replacement = Player::new(rng);
+                    let replacement = Player::new(rng); 
+                    let chain = if world.player(chain_target).mods.has(Mod::Stable) { None } else { Some(chain_target) };//assumption
                     Some(Event::IncinerationWithChain { 
                         target,
                         replacement,
@@ -795,14 +796,15 @@ impl Plugin for ModPlugin {
         let pitcher = game.pitching_team().pitcher;
         let pitcher_mods = &world.player(pitcher).mods;
         if batter_mods.has(Mod::Electric) && game.strikes > 0 && rng.next() < 0.2 {
-            return Some(Event::Zap { batter: true });
+            Some(Event::Zap { batter: true })
         } else if pitcher_mods.has(Mod::Electric) && game.balls > 0 && rng.next() < 0.2 {
-            return Some(Event::Zap { batter: false });
+            Some(Event::Zap { batter: false })
         } else if pitcher_mods.has(Mod::DebtU) && !batter_mods.has(Mod::Unstable) && rng.next() < 0.02 { //estimate
-            return Some(Event::HitByPitch { target: batter, hbp_type: 0 });
+            Some(Event::HitByPitch { target: batter, hbp_type: 0 })
         } else if pitcher_mods.has(Mod::RefinancedDebt) && !batter_mods.has(Mod::Flickering) && rng.next() < 0.02 { //estimate
-            return Some(Event::HitByPitch { target: batter, hbp_type: 1 });
+            Some(Event::HitByPitch { target: batter, hbp_type: 1 })
+        } else {
+            None
         }
-        None
     }
 }

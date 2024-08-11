@@ -112,7 +112,7 @@ pub enum Event {
     IncinerationWithChain {
         target: Uuid,
         replacement: Player,
-        chain: Uuid
+        chain: Option<Uuid>
     },
     PeckedFree {
         player: Uuid
@@ -451,7 +451,9 @@ impl Event {
                     game.pitching_team_mut().pitcher = replacement_id;
                 }
                 world.replace_player(target, replacement_id);
-                world.player_mut(chain).mods.add(Mod::Unstable, ModLifetime::Week);
+                if chain.is_some() {
+                    world.player_mut(chain.unwrap()).mods.add(Mod::Unstable, ModLifetime::Week);
+                }
             },
             Event::PeckedFree { player } => {
                 world.player_mut(player).mods.remove(Mod::Shelled);
