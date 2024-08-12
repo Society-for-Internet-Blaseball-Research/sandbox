@@ -18,7 +18,8 @@ pub enum Mod {
     Electric,
     RefinancedDebt,
     Flickering,
-    Stable
+    Stable,
+    HomeFieldAdvantage
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

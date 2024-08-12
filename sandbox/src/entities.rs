@@ -277,10 +277,6 @@ pub struct Team {
     pub rotation: Vec<Uuid>,
     pub shadows: Vec<Uuid>,
 
-    //pub lineup_mods: Vec<Vec<Mods>>
-    //pub rotation_mods: Vec<Vec<Mods>>
-    //idea
-
     pub mods: Mods,
 }
 

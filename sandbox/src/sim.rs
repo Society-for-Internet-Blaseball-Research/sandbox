@@ -328,6 +328,7 @@ impl Plugin for BatterStatePlugin {
             };
             let inning_begin = !first_batter && game.events.last() == "inningSwitch";
             let prev = if first_batter { team.lineup[0].clone() } else { team.lineup[(idx - 1) % team.lineup.len()].clone() };
+            //todo: improve this
             if !first_batter && !inning_begin && world.player(prev).mods.has(Mod::Reverberating) && rng.next() < 0.2 { //rough estimate
                 return Some(Event::BatterUp { batter: prev, reverberating: true });
             }
