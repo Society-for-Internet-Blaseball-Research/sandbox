@@ -119,6 +119,9 @@ pub enum Event {
     },
     Zap {
         batter: bool
+    },
+    InstinctWalk {
+        third: bool
     }
 }
 
@@ -465,6 +468,13 @@ impl Event {
                 } else {
                     game.balls -= 1;
                 }
+            },
+            Event::InstinctWalk { third } => {
+                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                game.runners.walk_instincts(third);
+                game.runners.add(if third { 2 } else { 1 }, game.batting_team().batter.unwrap());
+                game.base_sweep();
+                game.end_pa();
             }
         }
     }
@@ -508,7 +518,8 @@ impl Event {
             Event::HitByPitch { .. } => "hitByPitch",
             Event::IncinerationWithChain { .. } => "incinerationWithChain",
             Event::PeckedFree { .. } => "peckedFree",
-            Event::Zap { .. } => "zap"
+            Event::Zap { .. } => "zap",
+            Event::InstinctWalk { .. } => "instinctWalk"
         };
         String::from(ev)
     }

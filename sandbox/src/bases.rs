@@ -84,6 +84,20 @@ impl Baserunners {
         }
     }
 
+    pub fn walk_instincts(&mut self, third: bool) {
+        //todo: the runners who score end up on the wrong base
+        //does this cause problems?
+        if third {
+            self.advance_all(3);
+        } else {
+            if self.occupied(0) {
+                self.advance_all(2);
+            } else if self.occupied(1) {
+                self.advance_all(1);
+            }
+        }
+    }
+
     pub fn advance_if(&mut self, mut f: impl FnMut(&Baserunner) -> bool) {
         for i in 0..self.runners.len() {
             if self.can_advance(self.runners[i].base) {

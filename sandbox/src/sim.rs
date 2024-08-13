@@ -76,7 +76,11 @@ impl Plugin for BasePlugin {
                 if (game.balls + 1) < max_balls {
                     Event::Ball
                 } else {
-                    Event::Walk
+                    if world.player(game.batting_team().batter.unwrap()).mods.has(Mod::BaseInstincts) && rng.next() < 0.2 {
+                        Event::InstinctWalk { third: rng.next() * rng.next() < 0.5 }
+                    } else {
+                        Event::Walk
+                    }
                 }
             }
             PitchOutcome::StrikeSwinging => {
