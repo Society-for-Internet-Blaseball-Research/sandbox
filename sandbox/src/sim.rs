@@ -608,23 +608,13 @@ impl Plugin for WeatherPlugin {
                     let fielding_team_drains = rng.next() < 0.5;
                     let is_atbat = rng.next() < 0.5;
                     if is_atbat {
-                        if fielding_team_drains {
-                            Some(Event::Blooddrain {
-                                drainer: game.pitching_team().pitcher,
-                                target: game.batting_team().batter.unwrap(),
-                                stat: (rng.next() * 4.0).floor() as u8,
-                                siphon: false,
-                                siphon_effect: -1
-                            })
-                        } else {
-                            Some(Event::Blooddrain {
-                                drainer: game.batting_team().batter.unwrap(),
-                                target: game.pitching_team().pitcher,
-                                stat: (rng.next() * 4.0).floor() as u8,
-                                siphon: false,
-                                siphon_effect: -1
-                            })
-                        }
+                        Some(Event::Blooddrain {
+                            drainer: if fielding_team_drains { game.pitching_team().pitcher } else { game.batting_team().batter.unwrap() },
+                            target: if fielding_team_drains { game.batting_team().batter.unwrap() } else { game.pitching_team().pitcher },
+                            stat: (rng.next() * 4.0).floor() as u8,
+                            siphon: false,
+                            siphon_effect: -1
+                        })
                     } else {
                         let fielder_roll = rng.next();
                         let fielder = game.pick_fielder(world, fielder_roll);
@@ -633,23 +623,13 @@ impl Plugin for WeatherPlugin {
                         } else {
                             game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batting_team().batter.unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
                         };
-                        if fielding_team_drains {
-                            Some(Event::Blooddrain {
-                                drainer: fielder,
-                                target: hitter,
-                                stat: (rng.next() * 4.0).floor() as u8,
-                                siphon: false,
-                                siphon_effect: -1
-                            })
-                        } else {
-                            Some(Event::Blooddrain {
-                                drainer: hitter,
-                                target: fielder,
-                                stat: (rng.next() * 4.0).floor() as u8,
-                                siphon: false,
-                                siphon_effect: -1
-                            })
-                        }
+                        Some(Event::Blooddrain {
+                            drainer: if fielding_team_drains { fielder } else { hitter },
+                            target: if fielding_team_drains { hitter } else { fielder },
+                            stat: (rng.next() * 4.0).floor() as u8,
+                            siphon: false,
+                            siphon_effect: -1
+                        })
                     }
                 } else {
                     None
@@ -683,20 +663,13 @@ impl Plugin for WeatherPlugin {
             },
             Weather::SunPointOne | Weather::SumSun => None,
             Weather::Night => {
-                if rng.next() < 0.001 { //estimate
-                    if rng.next() < 0.5 {
-                        let shadows = &world.team(game.batting_team().id).shadows;
-                        let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
-                        let replacement = shadows[replacement_idx as usize];
-                        let boosts = roll_random_boosts(rng, 0.2);
-                        Some(Event::NightShift { batter: true, replacement, replacement_idx, boosts })
-                    } else {
-                        let shadows = &world.team(game.pitching_team().id).shadows;
-                        let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
-                        let replacement = shadows[replacement_idx as usize];
-                        let boosts = roll_random_boosts(rng, 0.2);
-                        Some(Event::NightShift { batter: false, replacement, replacement_idx, boosts })
-                    }
+                if rng.next() < 0.01 { //estimate
+                    let batter = rng.next() < 0.5;
+                    let shadows = if batter { &world.team(game.batting_team().id).shadows } else { &world.team(game.pitching_team().id).shadows };
+                    let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
+                    let replacement = shadows[replacement_idx as usize];
+                    let boosts = roll_random_boosts(rng, 0.2);
+                    Some(Event::NightShift { batter, replacement, replacement_idx, boosts })
                 } else {
                     None
                 }
