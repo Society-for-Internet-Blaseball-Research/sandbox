@@ -166,7 +166,7 @@ impl Event {
             }
             Event::Foul => {
                 game.strikes += 1;
-                game.strikes = game.strikes.min(2); //todo: kid named fourth strike
+                game.strikes = game.strikes.min(game.get_max_strikes(world) - 1); //todo: kid named fourth strike
             }
             Event::Strikeout => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());

@@ -1,5 +1,6 @@
 use bases::Baserunners;
 use entities::World;
+use mods::Mod;
 use uuid::Uuid;
 use events::Events;
 
@@ -68,6 +69,17 @@ pub struct GameTeam {
     pub batter_index: usize,
     pub score: f64, // sigh
 }
+
+//stealing this from Astrid
+pub struct MultiplierData {
+    weather: Weather,
+    day: u8,
+    runners_empty: bool,
+    top: bool,
+    maximum_blaseball: bool,
+    at_bats: i32
+}
+
 
 // todo: how much of this stuff really belongs on Game?
 // can we get rid of passing rng/world around everywhere in a nice way?
@@ -168,6 +180,26 @@ impl Game {
         let sun_point_one_coeff = if let Weather::SunPointOne = self.weather { (self.inning as f64) / 10.0 } else { 1.0 };
         let sum_sun_coeff = if let Weather::SumSun = self.weather { self.scoring_plays_inning as f64 } else { 0.0 };
         1.0 * polarity_coeff * sun_point_one_coeff + sum_sun_coeff
+    }
+
+    pub fn get_max_strikes(&self, world: &World) -> i16 {
+        let batter = world.player(self.batting_team().batter.unwrap());
+        if batter.mods.has(Mod::FourthStrike) {
+            4
+        } else {
+            3
+        }
+    }
+
+    pub fn compute_multiplier_data(&self, _world: &World) -> MultiplierData {
+        MultiplierData {
+            weather: self.weather.clone(),
+            day: 0, //todo
+            runners_empty: self.runners.empty(),
+            top: self.top,
+            maximum_blaseball: self.runners.iter().count() == 3, //todo: kid named fifth base
+            at_bats: 0, //todo
+        }
     }
 
     // todo: all of these are kind of nasty and will borrow all of self and that's usually annoying

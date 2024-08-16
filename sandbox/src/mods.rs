@@ -20,7 +20,8 @@ pub enum Mod {
     Flickering,
     Stable,
     HomeFieldAdvantage,
-    BaseInstincts
+    BaseInstincts,
+    AffinityForCrows
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

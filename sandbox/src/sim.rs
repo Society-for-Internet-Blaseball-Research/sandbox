@@ -66,7 +66,7 @@ struct BasePlugin;
 impl Plugin for BasePlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         let max_balls = 4;
-        let max_strikes = get_max_strikes(game, world);
+        let max_strikes = game.get_max_strikes(world);
         // let max_outs = 3;
 
         let last_strike = (game.strikes + 1) >= max_strikes;
@@ -168,25 +168,17 @@ impl Plugin for BasePlugin {
     }
 }
 
-//can we make this a Game instance method? probably not
-pub fn get_max_strikes(game: &Game, world: &World) -> i16 {
-    let batter = world.player(game.batting_team().batter.unwrap());
-    if batter.mods.has(Mod::FourthStrike) {
-        4
-    } else {
-        3
-    }
-}
-
 fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let pitcher = world.player(game.pitching_team().pitcher);
     let batter = world.player(game.batting_team().batter.unwrap());
 
     let is_flinching = game.strikes == 0 && batter.mods.has(Mod::Flinch);
 
-    let is_strike = rng.next() < formulas::strike_threshold(pitcher, batter, is_flinching);
+    let multiplier_data = &game.compute_multiplier_data(world);
+
+    let is_strike = rng.next() < formulas::strike_threshold(pitcher, batter, is_flinching, multiplier_data);
     let does_swing = if !is_flinching {
-        rng.next() < formulas::swing_threshold(pitcher, batter, is_strike)
+        rng.next() < formulas::swing_threshold(pitcher, batter, is_strike, multiplier_data)
     } else {
         false
     };
@@ -199,12 +191,12 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         }
     }
 
-    let does_contact = rng.next() < formulas::contact_threshold(pitcher, batter, is_strike);
+    let does_contact = rng.next() < formulas::contact_threshold(pitcher, batter, is_strike, multiplier_data);
     if !does_contact {
         return PitchOutcome::StrikeSwinging;
     }
 
-    let is_foul = rng.next() < formulas::foul_threshold(pitcher, batter);
+    let is_foul = rng.next() < formulas::foul_threshold(pitcher, batter, multiplier_data);
     if is_foul {
         return PitchOutcome::Foul;
     }
@@ -212,12 +204,12 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let out_defender_id = game.pick_fielder(world, rng.next());
     let out_defender = world.player(out_defender_id);
 
-    let is_out = rng.next() > formulas::out_threshold(pitcher, batter, out_defender);
+    let is_out = rng.next() > formulas::out_threshold(pitcher, batter, out_defender, multiplier_data);
     if is_out {
         let fly_defender_id = game.pick_fielder(world, rng.next());
-        let fly_defender = world.player(out_defender_id); //is this correct?
+        let fly_defender = world.player(out_defender_id); //todo: is this correct?
 
-        let is_fly = rng.next() < formulas::fly_threshold(fly_defender);
+        let is_fly = rng.next() < formulas::fly_threshold(fly_defender, multiplier_data);
         if is_fly {
             let mut advancing_runners = Vec::new();
             for baserunner in game.runners.iter() {
@@ -225,7 +217,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
                 let runner_id = baserunner.id.clone();
                 let runner = world.player(runner_id);
 
-                if rng.next() < formulas::flyout_advancement_threshold(runner, base_from) {
+                if rng.next() < formulas::flyout_advancement_threshold(runner, base_from, multiplier_data) {
                     advancing_runners.push(runner_id);
                 }
             }
@@ -241,17 +233,17 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         if !game.runners.empty() {
             let dp_roll = rng.next();
             if game.runners.occupied(0) {
-                if game.outs < 2 && dp_roll < formulas::double_play_threshold(batter, pitcher, out_defender) {
+                if game.outs < 2 && dp_roll < formulas::double_play_threshold(batter, pitcher, out_defender, multiplier_data) {
                     return PitchOutcome::DoublePlay {
                         runner_out: game.runners.pick_runner(rng.next())
                     };
                 } else {
                     let sac_roll = rng.next();
-                    if sac_roll < formulas::groundout_sacrifice_threshold(batter) {
+                    if sac_roll < formulas::groundout_sacrifice_threshold(batter, multiplier_data) {
                         for baserunner in game.runners.iter() {
                             let runner_id = baserunner.id.clone();
                             let runner = world.player(runner_id);
-                            if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender) {
+                            if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender, multiplier_data) {
                                 advancing_runners.push(runner_id);
                             }
                         }
@@ -269,7 +261,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
             for baserunner in game.runners.iter() {
                 let runner_id = baserunner.id.clone();
                 let runner = world.player(runner_id);
-                if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender) {
+                if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender, multiplier_data) {
                     advancing_runners.push(runner_id);
                 }
             }
@@ -280,7 +272,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         };
     }
 
-    let is_hr = rng.next() < formulas::hr_threshold(pitcher, batter);
+    let is_hr = rng.next() < formulas::hr_threshold(pitcher, batter, multiplier_data);
     if is_hr {
         return PitchOutcome::HomeRun;
     }
@@ -295,17 +287,17 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         let runner_id = baserunner.id.clone();
         let runner = world.player(runner_id);
 
-        if rng.next() < formulas::hit_advancement_threshold(runner, hit_defender) {
+        if rng.next() < formulas::hit_advancement_threshold(runner, hit_defender, multiplier_data) {
             advancing_runners.push(runner_id);
         }
     }
 
-    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender) {
+    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender, multiplier_data) {
         return PitchOutcome::Triple {
             advancing_runners
         };
     }
-    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender) {
+    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender, multiplier_data) {
         return PitchOutcome::Double {
             advancing_runners
         };

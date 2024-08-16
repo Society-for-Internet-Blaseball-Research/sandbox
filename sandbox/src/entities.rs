@@ -141,6 +141,29 @@ pub enum PlayerAttr {
     Cinnamon,
 }
 
+impl PlayerAttr {
+    pub fn is_batting(&self) -> bool {
+        let discr = *self as u8;
+        discr < 8
+    }
+    pub fn is_pitching(&self) -> bool {
+        let discr = *self as u8;
+        discr > 7 && discr < 14
+    }
+    pub fn is_running(&self) -> bool {
+        let discr = *self as u8;
+        discr > 13 && discr < 19
+    }
+    pub fn is_defense(&self) -> bool {
+        let discr = *self as u8;
+        discr > 18 && discr < 24
+    }
+    pub fn is_vibes(&self) -> bool {
+        let discr = *self as u8;
+        discr > 23
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Player {
     pub id: Uuid,
