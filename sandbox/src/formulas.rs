@@ -20,7 +20,7 @@ pub fn swing_threshold(pitcher: &Player, batter: &Player, is_strike: bool, multi
             / 4.0;
         0.7 + 0.35 * combined_batting - 0.4 * pitcher.ruthlessness  * multiplier(PlayerAttr::Ruthlessness, &pitcher.mods, multiplier_data) + 0.2 * (visc - 0.5)
     } else {
-        let combined = (12.0 * batter.ruthlessness * multiplier(PlayerAttr::Ruthlessness, &batter.mods, multiplier_data) //todo: batter ruth? are we sure?
+        let combined = (12.0 * pitcher.ruthlessness * multiplier(PlayerAttr::Ruthlessness, &pitcher.mods, multiplier_data)
             - 5.0 * batter.moxie * multiplier(PlayerAttr::Moxie, &batter.mods, multiplier_data)
             + 5.0 * batter.patheticism * multiplier(PlayerAttr::Patheticism, &pitcher.mods, multiplier_data)
             + 4.0 * visc)
