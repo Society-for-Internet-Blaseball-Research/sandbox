@@ -21,7 +21,8 @@ pub enum Mod {
     Stable,
     HomeFieldAdvantage,
     BaseInstincts,
-    AffinityForCrows
+    AffinityForCrows,
+    Growth
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
