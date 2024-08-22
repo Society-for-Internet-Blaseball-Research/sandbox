@@ -3,4 +3,4 @@ members = [
     "sandbox",
     "sandbox_test"
 ]
-workspace.resolver = "2"
+resolver = "2"
