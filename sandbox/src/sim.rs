@@ -464,7 +464,7 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Peanuts => {
-                if rng.next() < 0.02 { //estimate
+                if rng.next() < 0.000002 { //estimate
                     //this is maybe not rng compliant
                     let target = game.pick_player_weighted(world, rng.next(), |_uuid| 1.0, true); //theory
                     Some(Event::BigPeanut {
