@@ -122,6 +122,9 @@ pub enum Event {
     },
     InstinctWalk {
         third: bool
+    },
+    BigPeanut {
+        target: Uuid
     }
 }
 
@@ -475,6 +478,9 @@ impl Event {
                 game.runners.add(if third { 2 } else { 1 }, game.batting_team().batter.unwrap());
                 game.base_sweep();
                 game.end_pa();
+            },
+            Event::BigPeanut { target } => {
+                world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
             }
         }
     }
@@ -519,7 +525,8 @@ impl Event {
             Event::IncinerationWithChain { .. } => "incinerationWithChain",
             Event::PeckedFree { .. } => "peckedFree",
             Event::Zap { .. } => "zap",
-            Event::InstinctWalk { .. } => "instinctWalk"
+            Event::InstinctWalk { .. } => "instinctWalk",
+            Event::BigPeanut { .. } => "bigPeanut"
         };
         String::from(ev)
     }

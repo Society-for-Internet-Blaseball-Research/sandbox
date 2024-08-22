@@ -464,7 +464,13 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Peanuts => {
-                if rng.next() < 0.0006 {
+                if rng.next() < 0.02 { //estimate
+                    //this is maybe not rng compliant
+                    let target = game.pick_player_weighted(world, rng.next(), |_uuid| 1.0, true); //theory
+                    Some(Event::BigPeanut {
+                        target
+                    })
+                } else if rng.next() < 0.0006 {
                     //idk if runners can have a reaction
                     //but this is assuming it's the same as incins
                     let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
