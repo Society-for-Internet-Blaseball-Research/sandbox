@@ -19,10 +19,10 @@ fn main() {
     let team_a = world.gen_team(&mut rng, "Team A".to_string(), "A".to_string());
     let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
 
-    world.player_mut(world.team(team_a).lineup[0]).mods.add(Mod::Electric, ModLifetime::Permanent);
+    world.team_mut(team_a).mods.add(Mod::FifthBase, ModLifetime::Season);
 
     let mut game = Game {
-        weather: sandbox::Weather::Sun,
+        weather: sandbox::Weather::Peanuts,
         top: true,
         inning: 1,
         home_team: GameTeam {
@@ -46,10 +46,14 @@ fn main() {
         scoring_plays_inning: 0,
         salmon_resets_inning: 0,
         events: Events::new(),
-        runners: Baserunners::new(),
+        runners: Baserunners::new(if world.team(team_b).mods.has(Mod::FifthBase) { 5 } else { 4 }),
         linescore_home: vec![0.0],
         linescore_away: vec![0.0],
     };
+
+    if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) {
+        game.home_team.score += 1.0;
+    }
 
     loop {
         let mut sim = Sim::new(&mut world, &mut rng);
@@ -63,12 +67,22 @@ fn main() {
             break;
         } 
 
-        let base = format!(
+        let base = if game.runners.base_number == 5 {
+            format!(
+            "[{}|{}|{}|{}]",
+            if game.runners.occupied(3) { "X" } else { " " },
+            if game.runners.occupied(2) { "X" } else { " " },
+            if game.runners.occupied(1) { "X" } else { " " },
+            if game.runners.occupied(0) { "X" } else { " " }
+            )
+        } else {
+            format!(
             "[{}|{}|{}]",
             if game.runners.occupied(2) { "X" } else { " " },
             if game.runners.occupied(1) { "X" } else { " " },
             if game.runners.occupied(0) { "X" } else { " " }
-        );
+            )
+        };
 
         let away_score = (game.away_team.score * 10.0).round() / 10.0;
         let home_score = (game.home_team.score * 10.0).round() / 10.0; //floats

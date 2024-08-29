@@ -111,6 +111,11 @@ pub fn hr_threshold(pitcher: &Player, batter: &Player, multiplier_data: &Multipl
     0.12 + 0.16 * div - 0.08 * opw_supp - 0.18 * ballpark_sum
 }
 
+pub fn quadruple_threshold(_pitcher: &Player, _batter: &Player, _fielder: &Player, _multiplier_data: &MultiplierData) -> f64 {
+    //todo
+    0.015
+}
+
 pub fn triple_threshold(pitcher: &Player, batter: &Player, fielder: &Player, multiplier_data: &MultiplierData) -> f64 {
     let gf = batter.ground_friction * multiplier(PlayerAttr::GroundFriction, &batter.mods, multiplier_data);
     let opw = pitcher.overpowerment * multiplier(PlayerAttr::Overpowerment, &pitcher.mods, multiplier_data);
@@ -197,7 +202,8 @@ pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_d
             let indulg_factor = 0.065 * indulg + 0.3 * indulg.powf(2.0);
             return 0.045 + indulg_factor - 0.1 * elong - 0.1 * incon;
         },
-        2 => {
+        //todo: find fifth base flyout advancement; uhhh
+        2 | 3 => {
             return 0.45 + 0.35 * indulg - 0.1 * elong - 0.1 * incon;
         }
         _ => {

@@ -158,7 +158,7 @@ impl Event {
                 game.balls = 0;
                 game.strikes = 0;
                 game.scoring_plays_inning = 0;
-                game.runners = Baserunners::new();
+                game.runners = Baserunners::new(game.get_bases(world));
             }
             Event::GameOver => {}
             Event::Ball => {

@@ -60,6 +60,7 @@ enum PitchOutcome {
     Triple { advancing_runners: Vec<Uuid> },
     Double { advancing_runners: Vec<Uuid> },
     Single { advancing_runners: Vec<Uuid> },
+    Quadruple { advancing_runners: Vec<Uuid> }
 }
 
 struct BasePlugin;
@@ -135,7 +136,7 @@ impl Plugin for BasePlugin {
 
             // todo: there may be a subtle bug here since we don't sweep the runners after the forced advance
             // runner [1, 0], double, then we're at [3, 2], 3 *should* get swept and *then* 2 should get to advance to 3...
-            PitchOutcome::Triple { advancing_runners }=> {
+            PitchOutcome::Triple { advancing_runners } => {
                 let mut new_runners = game.runners.clone();
                 new_runners.advance_all(3);
                 new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
@@ -143,7 +144,7 @@ impl Plugin for BasePlugin {
                     bases: 3,
                     runners_after: new_runners,
                 }
-            }
+            },
 
             PitchOutcome::Double { advancing_runners } => {
                 let mut new_runners = game.runners.clone();
@@ -153,7 +154,7 @@ impl Plugin for BasePlugin {
                     bases: 2,
                     runners_after: new_runners,
                 }
-            }
+            },
 
             PitchOutcome::Single { advancing_runners } => {
                 let mut new_runners = game.runners.clone();
@@ -163,7 +164,17 @@ impl Plugin for BasePlugin {
                     bases: 1,
                     runners_after: new_runners,
                 }
-            }
+            },
+
+            PitchOutcome::Quadruple { advancing_runners }=> {
+                let mut new_runners = game.runners.clone();
+                new_runners.advance_all(4);
+                new_runners.advance_if(|runner| advancing_runners.contains(&runner.id));
+                Event::BaseHit {
+                    bases: 4,
+                    runners_after: new_runners,
+                }
+            },
         })
     }
 }
@@ -281,6 +292,10 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let hit_defender = world.player(hit_defender_id);
     let double_roll = rng.next();
     let triple_roll = rng.next();
+    let mut quadruple_roll = 1.0;
+    if game.get_bases(world) == 5 {
+        quadruple_roll = rng.next();
+    }
 
     let mut advancing_runners = Vec::new();
     for baserunner in game.runners.iter() {
@@ -290,6 +305,12 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         if rng.next() < formulas::hit_advancement_threshold(runner, hit_defender, multiplier_data) {
             advancing_runners.push(runner_id);
         }
+    }
+
+    if quadruple_roll < formulas::quadruple_threshold(pitcher, batter, hit_defender, multiplier_data) {
+        return PitchOutcome::Quadruple {
+            advancing_runners
+        };
     }
 
     if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender, multiplier_data) {
@@ -378,7 +399,7 @@ impl Plugin for StealingPlugin {
         let steal_defender = world.player(steal_defender_id);
 
         // todo: can we refactor `Baserunners` in a way where this sort of iteration is more natural
-        for base in (0..4).rev() {
+        for base in (0..game.get_bases(world)).rev() {
             if let Some(runner_id) = game.runners.at(base) {
                 if game.runners.can_advance(base) {
                     let runner = world.player(runner_id);

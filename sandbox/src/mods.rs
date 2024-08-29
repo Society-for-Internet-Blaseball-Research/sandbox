@@ -22,7 +22,8 @@ pub enum Mod {
     HomeFieldAdvantage,
     BaseInstincts,
     AffinityForCrows,
-    Growth
+    Growth,
+    FifthBase
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

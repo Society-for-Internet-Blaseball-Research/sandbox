@@ -87,11 +87,11 @@ pub struct MultiplierData {
 // like have `tick` not actually make any changes to the game state but instead apply that based on the EventData
 impl Game {
     fn base_sweep(&mut self) {
-        let mut new_runners = Baserunners::new();
+        let mut new_runners = Baserunners::new(self.runners.base_number);
         let mut scoring_play = false;
         for runner in self.runners.iter() {
             // todo: baserunner code is bad
-            if runner.base < 3 {
+            if runner.base < self.runners.base_number - 1 {
                 new_runners.add(runner.base, runner.id);
             } else {
                 scoring_play = true;
@@ -188,6 +188,14 @@ impl Game {
             4
         } else {
             3
+        }
+    }
+
+    pub fn get_bases(&self, world: &World) -> u8 {
+        if world.team(self.batting_team().id).mods.has(Mod::FifthBase) {
+            5
+        } else {
+            4
         }
     }
 
