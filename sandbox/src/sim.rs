@@ -750,15 +750,20 @@ impl Plugin for ModPlugin {
         let pitcher = game.pitching_team().pitcher;
         let pitcher_mods = &world.player(pitcher).mods;
         if batter_mods.has(Mod::Electric) && game.strikes > 0 && rng.next() < 0.2 {
-            Some(Event::Zap { batter: true })
+            return Some(Event::Zap { batter: true });
         } else if pitcher_mods.has(Mod::Electric) && game.balls > 0 && rng.next() < 0.2 {
-            Some(Event::Zap { batter: false })
+            return Some(Event::Zap { batter: false });
         } else if pitcher_mods.has(Mod::DebtU) && !batter_mods.has(Mod::Unstable) && rng.next() < 0.02 { //estimate
-            Some(Event::HitByPitch { target: batter, hbp_type: 0 })
+            return Some(Event::HitByPitch { target: batter, hbp_type: 0 });
         } else if pitcher_mods.has(Mod::RefinancedDebt) && !batter_mods.has(Mod::Flickering) && rng.next() < 0.02 { //estimate
-            Some(Event::HitByPitch { target: batter, hbp_type: 1 })
-        } else {
-            None
+            return Some(Event::HitByPitch { target: batter, hbp_type: 1 });
+        } else if game.balls == 0 && game.strikes == 0 {
+            if batter_mods.has(Mod::Charm) && rng.next() < 0.015 {
+                return Some(Event::CharmWalk);
+            } else if pitcher_mods.has(Mod::Charm) && rng.next() < 0.015 {
+                return Some(Event::CharmStrikeout);
+            }
         }
+        None
     }
 }

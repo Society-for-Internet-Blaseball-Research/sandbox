@@ -23,7 +23,8 @@ pub enum Mod {
     BaseInstincts,
     AffinityForCrows,
     Growth,
-    FifthBase
+    FifthBase,
+    Charm
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -125,7 +125,9 @@ pub enum Event {
     },
     BigPeanut {
         target: Uuid
-    }
+    },
+    CharmWalk,
+    CharmStrikeout
 }
 
 impl Event {
@@ -169,14 +171,14 @@ impl Event {
             }
             Event::Foul => {
                 game.strikes += 1;
-                game.strikes = game.strikes.min(game.get_max_strikes(world) - 1); //todo: kid named fourth strike
+                game.strikes = game.strikes.min(game.get_max_strikes(world) - 1);
             }
-            Event::Strikeout => {
+            Event::Strikeout | Event::CharmStrikeout => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.outs += 1;
                 game.end_pa();
             }
-            Event::Walk => {
+            Event::Walk | Event::CharmWalk => {
                 // maybe we should put batter in the event
                 // todo: make a function that returns the current batter
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
@@ -526,7 +528,9 @@ impl Event {
             Event::PeckedFree { .. } => "peckedFree",
             Event::Zap { .. } => "zap",
             Event::InstinctWalk { .. } => "instinctWalk",
-            Event::BigPeanut { .. } => "bigPeanut"
+            Event::BigPeanut { .. } => "bigPeanut",
+            Event::CharmWalk => "charmWalk",
+            Event::CharmStrikeout => "charmStrikeout"
         };
         String::from(ev)
     }
