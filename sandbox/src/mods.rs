@@ -23,6 +23,8 @@ pub enum Mod {
     BaseInstincts,
     AffinityForCrows,
     Growth,
+    ConsolidatedDebt,
+    Repeating,
     FifthBase,
     Charm
 }

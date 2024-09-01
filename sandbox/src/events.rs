@@ -51,7 +51,6 @@ pub enum Event {
         runner: Uuid,
         base_from: u8,
     },
-
     Incineration {
         target: Uuid,
         replacement: Player
@@ -441,6 +440,7 @@ impl Event {
                 let effect = match hbp_type {
                     0 => Some(Mod::Unstable),
                     1 => Some(Mod::Flickering),
+                    2 => Some(Mod::Repeating),
                     _ => None
                 };
                 world.player_mut(target).mods.add(effect.unwrap(), ModLifetime::Week);
