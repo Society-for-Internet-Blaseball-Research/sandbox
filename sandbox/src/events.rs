@@ -5,8 +5,7 @@ use crate::{bases::Baserunners, entities::{Player, World}, mods::{Mod, ModLifeti
 #[derive(Debug, Clone)]
 pub enum Event {
     BatterUp {
-        batter: Uuid,
-        reverberating: bool
+        batter: Uuid
     },
     InningSwitch {
         inning: i16,
@@ -101,6 +100,9 @@ pub enum Event {
         tangled: Uuid,
         decreases: Vec<f64>
     },
+    Reverberating {
+        batter: Uuid,
+    },
     Shelled {
         batter: Uuid
     },
@@ -126,7 +128,10 @@ pub enum Event {
         target: Uuid
     },
     CharmWalk,
-    CharmStrikeout
+    CharmStrikeout,
+    Repeating {
+        batter: Uuid,
+    }
 }
 
 impl Event {
@@ -134,11 +139,8 @@ impl Event {
         let repr = self.repr();
         game.events.add(repr.clone());
         match *self {
-            Event::BatterUp { batter, reverberating } => {
+            Event::BatterUp { batter } => {
                 let bt = game.batting_team_mut();
-                if reverberating {
-                    bt.batter_index -= 1;
-                }
                 bt.batter = Some(batter);
             }
             Event::InningSwitch { inning, top } => {
@@ -432,6 +434,11 @@ impl Event {
             Event::Soundproof { resists: _resists, tangled, ref decreases } => {
                 world.player_mut(tangled).boost(decreases);
             },
+            Event::Reverberating { batter } => {
+                let bt = game.batting_team_mut();
+                bt.batter_index -= 1;
+                bt.batter = Some(batter);
+            }
             Event::Shelled { batter: _batter } => {
                 let bt = game.batting_team_mut();
                 bt.batter_index += 1;
@@ -483,6 +490,11 @@ impl Event {
             },
             Event::BigPeanut { target } => {
                 world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
+            },
+            Event::Repeating { batter } => {
+                let bt = game.batting_team_mut();
+                bt.batter_index -= 1;
+                bt.batter = Some(batter);
             }
         }
     }
@@ -522,6 +534,7 @@ impl Event {
             Event::NightShift { .. } => "nightShift",
             Event::Fireproof { .. } => "fireproof",
             Event::Soundproof { .. } => "soundproof",
+            Event::Reverberating { .. } => "reverberating",
             Event::Shelled { .. } => "shelled",
             Event::HitByPitch { .. } => "hitByPitch",
             Event::IncinerationWithChain { .. } => "incinerationWithChain",
@@ -530,7 +543,8 @@ impl Event {
             Event::InstinctWalk { .. } => "instinctWalk",
             Event::BigPeanut { .. } => "bigPeanut",
             Event::CharmWalk => "charmWalk",
-            Event::CharmStrikeout => "charmStrikeout"
+            Event::CharmStrikeout => "charmStrikeout",
+            Event::Repeating { .. } => "repeating",
         };
         String::from(ev)
     }

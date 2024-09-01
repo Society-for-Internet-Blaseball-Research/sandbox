@@ -347,13 +347,17 @@ impl Plugin for BatterStatePlugin {
             let prev = if first_batter { team.lineup[0].clone() } else { team.lineup[(idx - 1) % team.lineup.len()].clone() };
             //todo: improve this
             if !first_batter && !inning_begin && world.player(prev).mods.has(Mod::Reverberating) && rng.next() < 0.2 { //rough estimate
-                return Some(Event::BatterUp { batter: prev, reverberating: true });
+                return Some(Event::Reverberating { batter: prev });
+            } else if !first_batter && !inning_begin && world.player(prev).mods.has(Mod::Repeating) && (game.events.last() == "baseHit" || game.events.last() == "homeRun") {
+                if let Weather::Reverb = game.weather {
+                    return Some(Event::Repeating { batter: prev });
+                }
             }
             let batter = team.lineup[idx % team.lineup.len()].clone();
             if world.player(batter).mods.has(Mod::Shelled) {
                 return Some(Event::Shelled { batter });
             }
-            Some(Event::BatterUp { batter, reverberating: false })
+            Some(Event::BatterUp { batter })
         } else {
             None
         }
