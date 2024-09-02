@@ -531,7 +531,19 @@ impl Plugin for WeatherPlugin {
                 let mut target1_opt = None;
                 let mut target2_opt = None;
 
-                if is_batter && world.player(batter).mods.has(Mod::Flickering) && feedback_roll < 0.02 {
+                if is_batter && world.player(batter).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055 {
+                    let target2_raw = game.pick_fielder(world, rng.next());
+                    
+                    target1_opt = Some(batter);
+                    target2_opt = Some(target2_raw);
+                } else if !is_batter && world.player(pitcher).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055 {
+                    let batting_team = world.team(game.batting_team().id);
+                    let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
+                    let target2_raw = batting_team.rotation[idx];
+
+                    target1_opt = Some(pitcher);
+                    target2_opt = Some(target2_raw);
+                } else if is_batter && world.player(batter).mods.has(Mod::Flickering) && feedback_roll < 0.02 {
                     let target2_raw = game.pick_fielder(world, rng.next());
                     
                     target1_opt = Some(batter);

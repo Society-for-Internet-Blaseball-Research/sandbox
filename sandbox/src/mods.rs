@@ -26,7 +26,8 @@ pub enum Mod {
     ConsolidatedDebt,
     Repeating,
     FifthBase,
-    Charm
+    Charm,
+    SuperFlickering //not bothering to type the actual mod name correctly
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
