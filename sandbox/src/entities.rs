@@ -169,6 +169,7 @@ pub struct Player {
     pub id: Uuid,
     pub name: String,
     pub mods: Mods,
+    pub legendary_item: Option<LegendaryItem>,
     pub team: Option<Uuid>, //ig
     
     pub feed: Events,
@@ -216,6 +217,7 @@ impl Player {
             id,
             name: "".to_string(), //todo: name gen
             mods: Mods::new(),
+            legendary_item: None,
             team: None,
 
             feed: Events::new(),
@@ -288,6 +290,17 @@ impl Player {
         self.pressurization += boosts[24];
         self.cinnamon += boosts[25];
     }
+    pub fn add_item(&mut self, item: LegendaryItem) {
+        self.legendary_item = Some(item);
+    }
+    pub fn remove_item(&mut self) {
+        self.legendary_item = None;
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum LegendaryItem {
+    DialTone
 }
 
 #[derive(Clone, Debug)]
