@@ -290,17 +290,18 @@ impl Player {
         self.pressurization += boosts[24];
         self.cinnamon += boosts[25];
     }
-    pub fn add_item(&mut self, item: LegendaryItem) {
+    pub fn add_legendary_item(&mut self, item: LegendaryItem) {
         self.legendary_item = Some(item);
     }
-    pub fn remove_item(&mut self) {
+    pub fn remove_legendary_item(&mut self) {
         self.legendary_item = None;
     }
 }
 
 #[derive(Clone, Debug)]
 pub enum LegendaryItem {
-    DialTone
+    DialTone,
+    LiteralArmCannon
 }
 
 #[derive(Clone, Debug)]

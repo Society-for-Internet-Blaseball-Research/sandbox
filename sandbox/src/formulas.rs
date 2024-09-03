@@ -241,7 +241,11 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData, 
                 return 0.0;
             } else if let PlayerAttr::Tragicness = attr {
                 return 0.0;
-            } else {
+            } else if attr.is_batting() {
+                return 1.0;
+            }
+        } else if let LegendaryItem::LiteralArmCannon = item_type {
+            if attr.is_pitching() {
                 return 1.0;
             }
         }
