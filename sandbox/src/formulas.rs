@@ -213,7 +213,7 @@ pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_d
 }
 
 fn coeff(attr: PlayerAttr, legendary_item: &Option<LegendaryItem>, mods: &Mods, multiplier_data: &MultiplierData, stat: f64) -> f64 {
-    item(attr, legendary_item, multiplier_data, stat) * multiplier(attr, mods, multiplier_data)
+    (stat + item(attr, legendary_item, multiplier_data, stat)) * multiplier(attr, mods, multiplier_data)
 }
 
 fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
@@ -236,19 +236,29 @@ fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
 
 fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData, stat: f64) -> f64 {
     if let Some(item_type) = item {
-        if let LegendaryItem::DialTone = item_type {
-            if let PlayerAttr::Patheticism = attr {
-                return 0.0;
-            } else if let PlayerAttr::Tragicness = attr {
-                return 0.0;
-            } else if attr.is_batting() {
-                return 1.0;
-            }
-        } else if let LegendaryItem::LiteralArmCannon = item_type {
-            if attr.is_pitching() {
-                return 1.0;
+        match item_type {
+            LegendaryItem::DialTone | LegendaryItem::VibeCheck | LegendaryItem::BangersAndSmash => {
+                if let PlayerAttr::Patheticism = attr {
+                    return -0.2;
+                } else if let PlayerAttr::Tragicness = attr {
+                    return -0.2;
+                } else if attr.is_batting() {
+                    return 0.2;
+                }
+            },
+            LegendaryItem::LiteralArmCannon => {
+                if attr.is_pitching() {
+                    return 0.08;
+                } else if attr.is_defense() {
+                    return 0.23;
+                }
+            },
+            LegendaryItem::GrapplingHook => {
+                if attr.is_defense() || attr.is_running() {
+                    return 0.6;
+                }
             }
         }
     }
-    stat
+    0.0
 }

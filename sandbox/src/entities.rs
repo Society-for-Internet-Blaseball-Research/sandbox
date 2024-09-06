@@ -301,7 +301,10 @@ impl Player {
 #[derive(Clone, Debug)]
 pub enum LegendaryItem {
     DialTone,
-    LiteralArmCannon
+    LiteralArmCannon,
+    VibeCheck,
+    BangersAndSmash,
+    GrapplingHook
 }
 
 #[derive(Clone, Debug)]
