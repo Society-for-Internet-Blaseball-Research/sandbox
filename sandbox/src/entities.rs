@@ -304,7 +304,8 @@ pub enum LegendaryItem {
     LiteralArmCannon,
     VibeCheck,
     BangersAndSmash,
-    GrapplingHook
+    GrapplingHook,
+    Mushroom
 }
 
 #[derive(Clone, Debug)]

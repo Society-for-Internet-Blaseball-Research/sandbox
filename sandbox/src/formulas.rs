@@ -213,7 +213,7 @@ pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_d
 }
 
 fn coeff(attr: PlayerAttr, legendary_item: &Option<LegendaryItem>, mods: &Mods, multiplier_data: &MultiplierData, stat: f64) -> f64 {
-    (stat + item(attr, legendary_item, multiplier_data, stat)) * multiplier(attr, mods, multiplier_data)
+    (stat + item(attr, legendary_item, multiplier_data, stat)).max(0.01) * multiplier(attr, mods, multiplier_data)
 }
 
 fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
@@ -256,6 +256,25 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData, 
             LegendaryItem::GrapplingHook => {
                 if attr.is_defense() || attr.is_running() {
                     return 0.6;
+                }
+            },
+            LegendaryItem::Mushroom => {
+                match attr {
+                    PlayerAttr::Divinity | PlayerAttr::Musclitude => {
+                        return 0.6;
+                    },
+                    PlayerAttr::Cinnamon => {
+                        return 0.4;
+                    },
+                    PlayerAttr::BaseThirst | PlayerAttr::Continuation | PlayerAttr::Indulgence | PlayerAttr::Laserlikeness => {
+                        return -0.4;
+                    },
+                    PlayerAttr::GroundFriction => {
+                        return -0.1;
+                    },
+                    _ => {
+                        return 0.0;
+                    }
                 }
             }
         }
