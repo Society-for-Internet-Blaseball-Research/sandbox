@@ -8,6 +8,7 @@ pub enum Mod {
     Soundproof,
     Shelled,
     Gravity,
+    NightVision,
     FourthStrike,
     DebtU,
     Unstable,
@@ -35,6 +36,7 @@ pub enum ModLifetime {
     Game,
     Week,
     Season,
+    LegendaryItem,
     Permanent,
 }
 
@@ -84,5 +86,9 @@ impl Mods {
 
     pub fn clear_season(&mut self) {
         self.mods.retain(|x| x.lifetime != ModLifetime::Season);
+    }
+
+    pub fn clear_legendary_item(&mut self) {
+        self.mods.retain(|x| x.lifetime != ModLifetime::LegendaryItem);
     }
 }

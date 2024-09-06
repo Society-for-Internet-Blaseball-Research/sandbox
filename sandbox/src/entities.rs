@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, f64::consts::PI};
 
 use uuid::Uuid;
 
-use crate::{events::Events, mods::Mods, rng::Rng};
+use crate::{events::Events, mods::{Mod, ModLifetime, Mods}, rng::Rng};
 
 pub struct World {
     pub players: BTreeMap<Uuid, Player>,
@@ -291,9 +291,13 @@ impl Player {
         self.cinnamon += boosts[25];
     }
     pub fn add_legendary_item(&mut self, item: LegendaryItem) {
+        if let LegendaryItem::NightVisionGoggles = item {
+            self.mods.add(Mod::NightVision, ModLifetime::LegendaryItem);
+        }
         self.legendary_item = Some(item);
     }
     pub fn remove_legendary_item(&mut self) {
+        self.mods.clear_legendary_item();
         self.legendary_item = None;
     }
 }
@@ -305,7 +309,8 @@ pub enum LegendaryItem {
     VibeCheck,
     BangersAndSmash,
     GrapplingHook,
-    Mushroom
+    Mushroom,
+    NightVisionGoggles
 }
 
 #[derive(Clone, Debug)]

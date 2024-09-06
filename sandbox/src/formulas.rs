@@ -213,7 +213,7 @@ pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_d
 }
 
 fn coeff(attr: PlayerAttr, legendary_item: &Option<LegendaryItem>, mods: &Mods, multiplier_data: &MultiplierData, stat: f64) -> f64 {
-    (stat + item(attr, legendary_item, multiplier_data, stat)).max(0.01) * multiplier(attr, mods, multiplier_data)
+    (stat + item(attr, legendary_item, multiplier_data)).max(0.01) * multiplier(attr, mods, multiplier_data)
 }
 
 fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
@@ -221,7 +221,7 @@ fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
     if mods.has(Mod::Growth) {
         multiplier += 0.05f64.min(data.day as f64 / 99.0 * 0.05);
     } else if let Weather::Birds = data.weather {
-        if attr.is_pitching() && mods.has(Mod::AffinityForCrows) {
+        if mods.has(Mod::AffinityForCrows) && attr.is_pitching() {
             multiplier += 0.5;
         }
     } else if mods.has(Mod::RedHot) {
@@ -231,10 +231,21 @@ fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
             multiplier += 2.0;
         }
     }
-    multiplier
+    if let Weather::Eclipse = data.weather {
+        if mods.has(Mod::NightVision) && attr.is_batting() {
+            multiplier += 0.5;
+        }
+    }
+    if let PlayerAttr::Patheticism = attr {
+        1.0 / multiplier
+    } else if let PlayerAttr::Tragicness = attr {
+        1.0 / multiplier
+    } else {
+        multiplier
+    }
 }
 
-fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData, stat: f64) -> f64 {
+fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData) -> f64 {
     if let Some(item_type) = item {
         match item_type {
             LegendaryItem::DialTone | LegendaryItem::VibeCheck | LegendaryItem::BangersAndSmash => {
@@ -276,6 +287,9 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData, 
                         return 0.0;
                     }
                 }
+            },
+            LegendaryItem::NightVisionGoggles => {
+                return 0.0;
             }
         }
     }
