@@ -463,6 +463,19 @@ impl Plugin for WeatherPlugin {
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
+                    let minimized = poll_for_mod(game, world, Mod::Minimized, false);
+                    if minimized.len() > 0 {
+                        if minimized.len() > 1 { 
+                            //I'm assuming that there's
+                            //no more than one legendary item of each kind
+                            //at any point in the sim
+                            todo!()
+                        } else {
+                            if world.player(target).team.unwrap() == world.player(minimized[0]).team.unwrap() && world.player(minimized[0]).mods.has(Mod::Minimized) {
+                                return Some(Event::IffeyJr { target });
+                            }
+                        }
+                    }
                     let chain_target = game.pick_player_weighted(world, rng.next(), |uuid| if world.player(uuid).team.unwrap() == world.player(target).team.unwrap() {
                         0.0
                     } else {
@@ -475,9 +488,22 @@ impl Plugin for WeatherPlugin {
                         replacement,
                         chain
                     })
-                } else if incin_roll < 0.00045 {
+                } else if incin_roll < 0.0045 {
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
+                    }
+                    let minimized = poll_for_mod(game, world, Mod::Minimized, false);
+                    if minimized.len() > 0 {
+                        if minimized.len() > 1 { 
+                            //I'm assuming that there's
+                            //no more than one legendary item of each kind
+                            //at any point in the sim
+                            todo!()
+                        } else {
+                            if world.player(target).team.unwrap() == world.player(minimized[0]).team.unwrap() && world.player(minimized[0]).mods.has(Mod::Minimized) {
+                                return Some(Event::IffeyJr { target });
+                            }
+                        }
                     }
                     let replacement = Player::new(rng);
                     Some(Event::Incineration { 

@@ -118,6 +118,9 @@ pub enum Event {
     PeckedFree {
         player: Uuid
     },
+    IffeyJr {
+        target: Uuid
+    },
     Zap {
         batter: bool
     },
@@ -430,7 +433,7 @@ impl Event {
                     team_mut.pitcher = replacement;
                 }
             },
-            Event::Fireproof { target: _target } => {},
+            Event::Fireproof { target: _target } | Event::IffeyJr { target: _target } => {},
             Event::Soundproof { resists: _resists, tangled, ref decreases } => {
                 world.player_mut(tangled).boost(decreases);
             },
@@ -539,6 +542,7 @@ impl Event {
             Event::HitByPitch { .. } => "hitByPitch",
             Event::IncinerationWithChain { .. } => "incinerationWithChain",
             Event::PeckedFree { .. } => "peckedFree",
+            Event::IffeyJr { .. } => "iffeyJr",
             Event::Zap { .. } => "zap",
             Event::InstinctWalk { .. } => "instinctWalk",
             Event::BigPeanut { .. } => "bigPeanut",

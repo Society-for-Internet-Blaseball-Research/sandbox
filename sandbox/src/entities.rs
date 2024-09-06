@@ -162,6 +162,15 @@ impl PlayerAttr {
         let discr = *self as u8;
         discr > 23
     }
+    pub fn is_negative(&self) -> bool {
+        if let PlayerAttr::Patheticism = *self {
+            true
+        } else if let PlayerAttr::Tragicness = *self {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -293,6 +302,8 @@ impl Player {
     pub fn add_legendary_item(&mut self, item: LegendaryItem) {
         if let LegendaryItem::NightVisionGoggles = item {
             self.mods.add(Mod::NightVision, ModLifetime::LegendaryItem);
+        } else if let LegendaryItem::TheIffeyJr = item {
+            self.mods.add(Mod::Minimized, ModLifetime::LegendaryItem);
         }
         self.legendary_item = Some(item);
     }
@@ -311,7 +322,8 @@ pub enum LegendaryItem {
     GrapplingHook,
     Mushroom,
     NightVisionGoggles,
-    ShrinkRay
+    ShrinkRay,
+    TheIffeyJr
 }
 
 #[derive(Clone, Debug)]

@@ -16,6 +16,7 @@ pub enum Mod {
     Spicy,
     HeatingUp,
     RedHot,
+    Minimized,
     Electric,
     RefinancedDebt,
     Flickering,

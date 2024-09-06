@@ -1,6 +1,6 @@
 use sandbox::{
     bases::Baserunners,
-    entities::{World},
+    entities::{LegendaryItem, World},
     events::{Event, Events},
     rng::Rng,
     sim::Sim,
@@ -9,20 +9,24 @@ use sandbox::{
 };
 
 fn main() {
-    //let mut rng = Rng::new(69, 420);
+    //edit seed
+    let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    let mut rng = Rng::new(37, 396396396396);
+    //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
     let team_a = world.gen_team(&mut rng, "Team A".to_string(), "A".to_string());
     let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
-
-    world.team_mut(team_a).mods.add(Mod::FifthBase, ModLifetime::Season);
+    
+    //edit mods and legendary items
+    //world.player_mut(world.team(team_a).lineup[0]).mods.add(Mod::Flinch);
+    //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::DialTone);
 
     let mut game = Game {
-        weather: sandbox::Weather::Peanuts,
+        //edit weather
+        weather: sandbox::Weather::Eclipse,
         top: true,
         inning: 1,
         home_team: GameTeam {

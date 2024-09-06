@@ -213,7 +213,11 @@ pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_d
 }
 
 fn coeff(attr: PlayerAttr, legendary_item: &Option<LegendaryItem>, mods: &Mods, multiplier_data: &MultiplierData, stat: f64) -> f64 {
-    (stat + item(attr, legendary_item, multiplier_data)).max(0.01) * multiplier(attr, mods, multiplier_data)
+    let mut item_stat = (stat + item(attr, legendary_item, multiplier_data)).max(0.01);
+    if attr.is_negative() {
+        item_stat = item_stat.min(0.99);
+    }
+    item_stat * multiplier(attr, mods, multiplier_data)
 }
 
 fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
@@ -249,9 +253,7 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData) 
     if let Some(item_type) = item {
         match item_type {
             LegendaryItem::DialTone | LegendaryItem::VibeCheck | LegendaryItem::BangersAndSmash => {
-                if let PlayerAttr::Patheticism = attr {
-                    return -0.2;
-                } else if let PlayerAttr::Tragicness = attr {
+                if attr.is_negative() {
                     return -0.2;
                 } else if attr.is_batting() {
                     return 0.2;
@@ -313,6 +315,13 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData) 
                     }
                 }
             },
+            LegendaryItem::TheIffeyJr => {
+                if attr.is_negative() {
+                    return 0.51;
+                } else if attr.is_batting() {
+                    return -0.51;
+                }
+            }
         }
     }
     0.0
