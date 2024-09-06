@@ -310,7 +310,8 @@ pub enum LegendaryItem {
     BangersAndSmash,
     GrapplingHook,
     Mushroom,
-    NightVisionGoggles
+    NightVisionGoggles,
+    ShrinkRay
 }
 
 #[derive(Clone, Debug)]

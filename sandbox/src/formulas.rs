@@ -290,7 +290,29 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData) 
             },
             LegendaryItem::NightVisionGoggles => {
                 return 0.0;
-            }
+            },
+            LegendaryItem::ShrinkRay => {
+                match attr {
+                    PlayerAttr::Moxie => {
+                        return 0.1;
+                    },
+                    PlayerAttr::BaseThirst | PlayerAttr::Continuation | PlayerAttr::Indulgence | PlayerAttr::Laserlikeness => {
+                        return 0.2;
+                    },
+                    PlayerAttr::GroundFriction => {
+                        return 0.175;
+                    },
+                    PlayerAttr::Musclitude => {
+                        return -0.07;
+                    },
+                    PlayerAttr::Divinity => {
+                        return -0.05;
+                    },
+                    _ => {
+                        return 0.0;
+                    }
+                }
+            },
         }
     }
     0.0
