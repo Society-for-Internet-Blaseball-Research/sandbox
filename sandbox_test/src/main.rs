@@ -1,23 +1,32 @@
 use sandbox::{
     bases::Baserunners,
-    entities::{Player, Team, World},
-    mods::Mods,
+    entities::{LegendaryItem, World},
+    events::{Event, Events},
     rng::Rng,
-    sim::{Event, Sim},
+    sim::Sim,
+    mods::{Mod, ModLifetime},
     Game, GameTeam,
 };
-use uuid::Uuid;
 
 fn main() {
-    //let mut rng = Rng::new(69, 420);
-    let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
+    //edit seed
+    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
+    //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
+    //let mut rng = Rng::new(37, 396396396396);
+    //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
-    let team_a = gen_team(&mut world, &mut rng, "Team A".to_string(), "A".to_string());
-    let team_b = gen_team(&mut world, &mut rng, "Team B".to_string(), "B".to_string());
+    let team_a = world.gen_team(&mut rng, "Team A".to_string(), "A".to_string());
+    let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
+    
+    //edit mods and legendary items
+    //world.player_mut(world.team(team_a).lineup[0]).mods.add(Mod::Flinch);
+    //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::DialTone);
 
     let mut game = Game {
-        weather: sandbox::Weather::Sun2,
+        //edit weather
+        weather: sandbox::Weather::Eclipse,
         top: true,
         inning: 1,
         home_team: GameTeam {
@@ -37,8 +46,18 @@ fn main() {
         balls: 0,
         strikes: 0,
         outs: 0,
-        runners: Baserunners::new(),
+        polarity: false,
+        scoring_plays_inning: 0,
+        salmon_resets_inning: 0,
+        events: Events::new(),
+        runners: Baserunners::new(if world.team(team_b).mods.has(Mod::FifthBase) { 5 } else { 4 }),
+        linescore_home: vec![0.0],
+        linescore_away: vec![0.0],
     };
+
+    if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) {
+        game.home_team.score += 1.0;
+    }
 
     loop {
         let mut sim = Sim::new(&mut world, &mut rng);
@@ -50,21 +69,34 @@ fn main() {
         if let Event::GameOver = evt {
             println!("game over!");
             break;
-        }
+        } 
 
-        let base = format!(
+        let base = if game.runners.base_number == 5 {
+            format!(
+            "[{}|{}|{}|{}]",
+            if game.runners.occupied(3) { "X" } else { " " },
+            if game.runners.occupied(2) { "X" } else { " " },
+            if game.runners.occupied(1) { "X" } else { " " },
+            if game.runners.occupied(0) { "X" } else { " " }
+            )
+        } else {
+            format!(
             "[{}|{}|{}]",
             if game.runners.occupied(2) { "X" } else { " " },
             if game.runners.occupied(1) { "X" } else { " " },
             if game.runners.occupied(0) { "X" } else { " " }
-        );
+            )
+        };
+
+        let away_score = (game.away_team.score * 10.0).round() / 10.0;
+        let home_score = (game.home_team.score * 10.0).round() / 10.0; //floats
 
         println!(
             "{}{} {}@{} ({}b/{}s/{}o) {} {:?}",
             if game.top { "t" } else { "b" },
             game.inning,
-            game.away_team.score,
-            game.home_team.score,
+            away_score,
+            home_score,
             game.balls,
             game.strikes,
             game.outs,
@@ -74,73 +106,4 @@ fn main() {
     }
 
     // println!("Hello, world!");
-}
-
-fn gen_team(world: &mut World, rng: &mut Rng, name: String, emoji: String) -> Uuid {
-    let id = Uuid::new_v4();
-    let mut team = Team {
-        id,
-        emoji: emoji,
-        lineup: Vec::new(),
-        rotation: Vec::new(),
-        shadows: Vec::new(),
-        name: name,
-        mods: Mods::new(),
-    };
-
-    for _ in 0..9 {
-        team.lineup.push(gen_player(world, rng));
-    }
-
-    for _ in 0..5 {
-        team.rotation.push(gen_player(world, rng));
-    }
-
-    for _ in 0..11 {
-        team.shadows.push(gen_player(world, rng));
-    }
-
-    world.insert_team(team);
-    id
-}
-
-fn gen_player(world: &mut World, rng: &mut Rng) -> Uuid {
-    let id = Uuid::new_v4();
-
-    let name = format!("Player {}", &id.to_string()[..8]);
-    let player = Player {
-        id: id,
-        name,
-        mods: Mods::new(),
-
-        // this is not rng order compatible
-        buoyancy: rng.next(),
-        divinity: rng.next(),
-        martyrdom: rng.next(),
-        moxie: rng.next(),
-        musclitude: rng.next(),
-        patheticism: rng.next(),
-        thwackability: rng.next(),
-        tragicness: rng.next(),
-        coldness: rng.next(),
-        overpowerment: rng.next(),
-        ruthlessness: rng.next(),
-        shakespearianism: rng.next(),
-        suppression: rng.next(),
-        unthwackability: rng.next(),
-        base_thirst: rng.next(),
-        continuation: rng.next(),
-        ground_friction: rng.next(),
-        indulgence: rng.next(),
-        laserlikeness: rng.next(),
-        anticapitalism: rng.next(),
-        chasiness: rng.next(),
-        omniscience: rng.next(),
-        tenaciousness: rng.next(),
-        watchfulness: rng.next(),
-        pressurization: rng.next(),
-        cinnamon: rng.next(),
-    };
-    world.insert_player(player);
-    id
 }

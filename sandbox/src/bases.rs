@@ -9,12 +9,14 @@ pub struct Baserunner {
 #[derive(Debug, Clone)]
 pub struct Baserunners {
     pub runners: Vec<Baserunner>,
+    pub base_number: u8,
 }
 
 impl Baserunners {
-    pub fn new() -> Baserunners {
+    pub fn new(bn: u8) -> Baserunners {
         Baserunners {
             runners: Vec::new(),
+            base_number: bn
         }
     }
 
@@ -31,6 +33,10 @@ impl Baserunners {
             .iter()
             .find(|x| x.base == base)
             .map(|x| x.id.clone())
+    }
+
+    pub fn contains(&self, id: Uuid) -> bool {
+        self.runners.iter().any(|x| x.id == id)
     }
 
     pub fn advance(&mut self, base: u8) {
@@ -67,7 +73,7 @@ impl Baserunners {
     pub fn walk(&mut self) {
         // todo: this code is also crap
         let mut num_occupied = 0;
-        for i in 0..5 {
+        for i in 0..self.base_number + 1 {
             if self.occupied(i) {
                 num_occupied += 1;
             } else {
@@ -77,6 +83,21 @@ impl Baserunners {
 
         for i in (0..num_occupied).rev() {
             self.advance(i);
+        }
+    }
+
+    pub fn walk_instincts(&mut self, third: bool) {
+        //todo: the runners who score end up on the wrong base
+        //does this cause problems?
+        //yes past me it does cause problems because of fifth base
+        if third {
+            self.advance_all(3);
+        } else {
+            if self.occupied(0) {
+                self.advance_all(2);
+            } else if self.occupied(1) {
+                self.advance_all(1);
+            }
         }
     }
 
@@ -91,7 +112,7 @@ impl Baserunners {
     }
 
     pub fn forced_advance_if(&mut self, mut f: impl FnMut(&Baserunner) -> bool) {
-        if self.occupied(0) && self.occupied(1) {
+        if self.occupied(0) && self.occupied(1) && (self.base_number == 4 || self.occupied(2)) {
             for runner in self.runners.iter_mut() {
                 runner.base += 1;
             }

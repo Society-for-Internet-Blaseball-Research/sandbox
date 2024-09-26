@@ -1,7 +1,35 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 // todo: repr u16 for compactness?
 pub enum Mod {
+    TargetedShame,
     Flinch,
+    Reverberating,
+    Fireproof,
+    Soundproof,
+    Shelled,
+    Gravity,
+    NightVision,
+    FourthStrike,
+    DebtU,
+    Unstable,
+    Superallergic,
+    Spicy,
+    HeatingUp,
+    RedHot,
+    Minimized,
+    Electric,
+    RefinancedDebt,
+    Flickering,
+    Stable,
+    HomeFieldAdvantage,
+    BaseInstincts,
+    AffinityForCrows,
+    Growth,
+    ConsolidatedDebt,
+    Repeating,
+    FifthBase,
+    Charm,
+    SuperFlickering //not bothering to type the actual mod name correctly
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -9,6 +37,7 @@ pub enum ModLifetime {
     Game,
     Week,
     Season,
+    LegendaryItem,
     Permanent,
 }
 
@@ -45,7 +74,7 @@ impl Mods {
     }
 
     pub fn remove(&mut self, m: Mod) {
-        self.mods.retain(|x| x.the_mod == m)
+        self.mods.retain(|x| x.the_mod != m)
     }
 
     pub fn clear_game(&mut self) {
@@ -58,5 +87,9 @@ impl Mods {
 
     pub fn clear_season(&mut self) {
         self.mods.retain(|x| x.lifetime != ModLifetime::Season);
+    }
+
+    pub fn clear_legendary_item(&mut self) {
+        self.mods.retain(|x| x.lifetime != ModLifetime::LegendaryItem);
     }
 }

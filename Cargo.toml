@@ -3,3 +3,4 @@ members = [
     "sandbox",
     "sandbox_test"
 ]
+resolver = "2"
