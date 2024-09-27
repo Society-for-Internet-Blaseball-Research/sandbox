@@ -184,7 +184,8 @@ impl Game {
 
     pub fn get_max_strikes(&self, world: &World) -> i16 {
         let batter = world.player(self.batting_team().batter.unwrap());
-        if batter.mods.has(Mod::FourthStrike) {
+        let team = world.team(self.batting_team().id);
+        if batter.mods.has(Mod::FourthStrike) || team.mods.has(Mod::FourthStrike) {
             4
         } else {
             3

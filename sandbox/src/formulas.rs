@@ -318,7 +318,7 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData) 
             LegendaryItem::TheIffeyJr => {
                 if attr.is_negative() {
                     return 0.51;
-                } else if attr.is_batting() {
+                } else if attr.is_batting() || attr.is_running() {
                     return -0.51;
                 }
             }
