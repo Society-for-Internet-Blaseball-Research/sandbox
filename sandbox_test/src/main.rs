@@ -21,12 +21,11 @@ fn main() {
     let team_b = world.gen_team(&mut rng, "Team B".to_string(), "B".to_string());
     
     //edit mods and legendary items
-    //world.player_mut(world.team(team_a).lineup[0]).mods.add(Mod::Flinch);
-    //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::DialTone);
+    //world.team_mut(team_a).mods.add(Mod::FourthStrike, ModLifetime::Season);
+    //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
 
     let mut game = Game {
-        //edit weather
-        weather: sandbox::Weather::Eclipse,
+        weather: sandbox::Weather::generate(&mut rng),
         top: true,
         inning: 1,
         home_team: GameTeam {

@@ -1,6 +1,7 @@
 use bases::Baserunners;
 use entities::World;
 use mods::Mod;
+use rng::Rng;
 use uuid::Uuid;
 use events::Events;
 
@@ -34,6 +35,32 @@ pub enum Weather {
     SumSun,
     //Jazz
     Night
+}
+
+impl Weather {
+    pub fn generate(rng: &mut Rng) -> Weather {
+        let roll = rng.next();
+        //todo: add season rulesets
+        if roll < 0.05 {
+            println!("eclipse");
+            Weather::Eclipse
+        } else if roll < 0.1 {
+            println!("blooddrain");
+            Weather::Blooddrain
+        } else if roll < 0.4 {
+            println!("peanuts");
+            Weather::Peanuts
+        } else if roll < 0.55 {
+            println!("birds");
+            Weather::Birds
+        } else if roll < 0.7 {
+            println!("feedback");
+            Weather::Feedback
+        } else {
+            println!("reverb");
+            Weather::Reverb
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
