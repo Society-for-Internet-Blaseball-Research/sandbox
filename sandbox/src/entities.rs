@@ -109,6 +109,33 @@ impl World {
     }
 }
 
+pub struct NameGen<'a> {
+    first_names: Vec<&'a str>,
+    last_names: Vec<&'a str>,
+    first_name_length: u16,
+    last_name_length: u16,
+}
+
+impl<'a> NameGen<'a> {
+    pub fn new() -> NameGen<'a> {
+        //todo: season rulesets
+        NameGen {
+            first_names: include_str!("firstnames.txt").split_whitespace().collect(),
+            last_names: include_str!("lastnames.txt").split_whitespace().collect(),
+            first_name_length: 531,
+            last_name_length: 537,
+        }
+    }
+    pub fn generate(&self, rng: &mut Rng) -> String {
+        let first_name_index = (rng.next() * self.first_name_length as f64).floor() as usize;
+        let last_name_index = (rng.next() * self.last_name_length as f64).floor() as usize;
+        let mut name = self.first_names[first_name_index].to_string();
+        name.push_str(" ");
+        name.push_str(self.last_names[last_name_index]);
+        name
+    }
+}
+
 // use this for like multiplier calc or something
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
