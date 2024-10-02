@@ -122,8 +122,8 @@ impl<'a> NameGen<'a> {
         NameGen {
             first_names: include_str!("firstnames.txt").split_whitespace().collect(),
             last_names: include_str!("lastnames.txt").split_whitespace().collect(),
-            first_name_length: 531,
-            last_name_length: 537,
+            first_name_length: 532,
+            last_name_length: 538,
         }
     }
     pub fn generate(&self, rng: &mut Rng) -> String {
