@@ -65,6 +65,7 @@ impl Weather {
 
 #[derive(Clone, Debug)]
 pub struct Game {
+    pub id: Uuid,
     pub weather: Weather,
 
     pub top: bool,

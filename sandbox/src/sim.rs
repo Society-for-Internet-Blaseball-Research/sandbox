@@ -10,7 +10,7 @@ pub trait Plugin {
 
 pub struct Sim<'a> {
     plugins: Vec<Box<dyn Plugin>>,
-    world: &'a mut World,
+    pub world: &'a mut World,
     rng: &'a mut Rng,
 }
 
