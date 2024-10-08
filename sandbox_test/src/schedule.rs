@@ -8,7 +8,7 @@ use sandbox::{
 };
 use uuid::Uuid;
 
-fn generate_game(team_a: Uuid, team_b: Uuid, rng: &mut Rng, world: &World) -> Game {
+fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, world: &World) -> Game {
     Game {
         id: Uuid::new_v4(),
         weather: sandbox::Weather::generate(rng),
@@ -17,14 +17,14 @@ fn generate_game(team_a: Uuid, team_b: Uuid, rng: &mut Rng, world: &World) -> Ga
         home_team: GameTeam {
             id: team_a,
             //todo: days
-            pitcher: world.team(team_a).rotation[0],
+            pitcher: world.team(team_a).rotation[day % world.team(team_a).rotation.len()],
             batter: None,
             batter_index: 0,
             score: if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 },
         },
         away_team: GameTeam {
             id: team_b,
-            pitcher: world.team(team_b).rotation[0],
+            pitcher: world.team(team_b).rotation[day % world.team(team_b).rotation.len()],
             batter: None,
             batter_index: 0,
             score: 0.0,
@@ -73,6 +73,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 let order_num = rng.index(orders.len());
                 let order = orders[order_num];
                 daily_games.push(ScheduleGame {
+                    day,
                     order,
                     home_team: divisions[home_team_num],
                     away_team: divisions[away_team_num]
@@ -128,6 +129,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 let order_num = rng.index(orders.len());
                 let order = orders[order_num];
                 daily_games.push(ScheduleGame {
+                    day,
                     order,
                     home_team: divisions[home_team_num],
                     away_team: divisions[away_team_num]
@@ -154,6 +156,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 let order_num = rng.index(orders.len());
                 let order = orders[order_num];
                 daily_games.push(ScheduleGame {
+                    day,
                     order,
                     home_team: divisions[home_team_num],
                     away_team: divisions[away_team_num]
@@ -184,7 +187,8 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                     let order_num = rng.index(orders.len());
                     let order = orders[order_num];
                     daily_games.push(ScheduleGame {
-                        order: order,
+                        day,
+                        order,
                         home_team: divisions[home_team_num],
                         away_team: divisions[away_team_num]
                     });
@@ -213,6 +217,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             }
             let mut orders: Vec<usize> = (0..10).collect();
             for game in daily_games.iter_mut() {
+                game.day = day;
                 let order = rng.index(orders.len());
                 game.order = orders[order];
                 orders.retain(|&n| n != order);
@@ -228,11 +233,12 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
 }
 
 pub fn generate_games(schedule: Vec<ScheduleGame>, world: &World, rng: &mut Rng) -> Vec<Game> {
-    schedule.iter().map(|sg| generate_game(sg.home_team, sg.away_team, rng, world)).collect()
+    schedule.iter().map(|sg| generate_game(sg.home_team, sg.away_team, sg.day, rng, world)).collect()
 }
 
 #[derive(Debug, Clone)]
 pub struct ScheduleGame {
+    day: usize,
     order: usize,
     home_team: Uuid,
     away_team: Uuid

@@ -29,7 +29,7 @@ fn main() {
         teams.push(world.gen_team(&mut rng, team_names[i].to_string(), emojis[i].to_string()));
     }
     //this is supposed to be editable so it's in human readable format
-    //IMPORTANT: team names in teams.txt must be sorted
+    //IMPORTANT: team names in teams.txt must be sorted alphabetically
     let divisions: Vec<Uuid> = 
         vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Mexico City Wild Wings", "San Francisco Lovers",
         "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Unlimited Tacos",
