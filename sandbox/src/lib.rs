@@ -67,6 +67,7 @@ impl Weather {
 pub struct Game {
     pub id: Uuid,
     pub weather: Weather,
+    pub day: usize,
 
     pub top: bool,
     pub inning: i16, // 1-indexed
@@ -101,7 +102,7 @@ pub struct GameTeam {
 //stealing this from Astrid
 pub struct MultiplierData {
     weather: Weather,
-    day: u8,
+    day: usize,
     runners_empty: bool,
     top: bool,
     maximum_blaseball: bool,
@@ -231,7 +232,7 @@ impl Game {
     pub fn compute_multiplier_data(&self, _world: &World) -> MultiplierData {
         MultiplierData {
             weather: self.weather.clone(),
-            day: 0, //todo
+            day: self.day,
             runners_empty: self.runners.empty(),
             top: self.top,
             maximum_blaseball: self.runners.iter().count() == 3, //todo: kid named fifth base

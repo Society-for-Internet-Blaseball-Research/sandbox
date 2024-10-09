@@ -12,6 +12,7 @@ fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, world: &
     Game {
         id: Uuid::new_v4(),
         weather: sandbox::Weather::generate(rng),
+        day,
         top: true,
         inning: 1,
         home_team: GameTeam {
