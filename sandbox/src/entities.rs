@@ -72,6 +72,8 @@ impl World {
             rotation: Vec::new(),
             shadows: Vec::new(),
             name,
+            wins: 0,
+            losses: 0,
             mods: Mods::new(),
         };
 
@@ -91,6 +93,7 @@ impl World {
         id
     }
 
+    //CLONED UUIDS
     pub fn gen_player(&mut self, rng: &mut Rng, team: Uuid) -> Uuid {
         let mut player = Player::new(rng);
         let id = player.id;
@@ -363,25 +366,22 @@ pub struct Team {
     pub rotation: Vec<Uuid>,
     pub shadows: Vec<Uuid>,
 
+    pub wins: i16,
+    pub losses: i16,
+
     pub mods: Mods,
 }
 
 impl Team {
     fn replace_player(&mut self, id: Uuid, new_id: Uuid) {
-        let all_players = vec![&mut self.lineup, &mut self.rotation, &mut self.shadows];
-
         //todo: write this code with return
-        let mut found = false;
-        for location in all_players {
-            let position = location.iter().position(|x| *x == id);
-            if let Some(idx) = position {
-                location[idx] = new_id;
-                found = true;
-                break;
-            }
-        }
-        
-        if !found {
+        if let Some(idx) = self.lineup.iter().position(|x| *x == id) {
+            *(self.lineup.get_mut(idx).unwrap())= new_id;
+        } else if let Some(idx) = self.rotation.iter().position(|x| *x == id) {
+            *(self.rotation.get_mut(idx).unwrap()) = new_id;
+        } else if let Some(idx) = self.shadows.iter().position(|x| *x == id) {
+            *(self.shadows.get_mut(idx).unwrap()) = new_id;
+        } else {
             panic!("player not found");
         }
     }
@@ -476,6 +476,7 @@ impl Team {
         reverb_changes
     }
 
+    //CLONED UUIDS
     pub fn apply_reverb_changes(&mut self, reverb_type: u8, changes: &Vec<usize>) {
         let mut result: Vec<Uuid> = Vec::new();
         let lineup_length = self.lineup.len();

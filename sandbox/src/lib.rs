@@ -42,22 +42,16 @@ impl Weather {
         let roll = rng.next();
         //todo: add season rulesets
         if roll < 0.05 {
-            println!("eclipse");
             Weather::Eclipse
         } else if roll < 0.1 {
-            println!("blooddrain");
             Weather::Blooddrain
         } else if roll < 0.4 {
-            println!("peanuts");
             Weather::Peanuts
         } else if roll < 0.55 {
-            println!("birds");
             Weather::Birds
         } else if roll < 0.7 {
-            println!("feedback");
             Weather::Feedback
         } else {
-            println!("reverb");
             Weather::Reverb
         }
     }
@@ -165,22 +159,25 @@ impl Game {
 
         let mut eligible_players = Vec::new();
         for i in 0..home_team.lineup.len() {
-            eligible_players.push(home_team.lineup[i].clone());
+            eligible_players.push(home_team.lineup[i]);
         }
         for i in 0..away_team.lineup.len() {
-            eligible_players.push(away_team.lineup[i].clone());
+            eligible_players.push(away_team.lineup[i]);
         }
         if only_current {
-            eligible_players.push(self.home_team.pitcher.clone());
-            eligible_players.push(self.away_team.pitcher.clone());
+            eligible_players.push(self.home_team.pitcher);
+            eligible_players.push(self.away_team.pitcher);
         } else {
             for i in 0..home_team.rotation.len() {
-                eligible_players.push(home_team.rotation[i].clone());
+                eligible_players.push(home_team.rotation[i]);
             }
             for i in 0..away_team.rotation.len() {
-                eligible_players.push(away_team.rotation[i].clone());
+                eligible_players.push(away_team.rotation[i]);
             }
         }
+        /*if self.day == 11 {
+            println!("{:?}", eligible_players);
+        }*/
 
         let mut weights: Vec<f64> = Vec::new();
         for i in 0..eligible_players.len() {

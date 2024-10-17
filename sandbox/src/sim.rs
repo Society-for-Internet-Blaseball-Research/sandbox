@@ -471,6 +471,7 @@ impl Plugin for WeatherPlugin {
                             //at any point in the sim
                             todo!()
                         } else {
+                            //UUID COMPARISON
                             if world.player(target).team.unwrap() == world.player(minimized[0]).team.unwrap() && world.player(minimized[0]).mods.has(Mod::Minimized) {
                                 return Some(Event::IffeyJr { target });
                             }
@@ -488,7 +489,7 @@ impl Plugin for WeatherPlugin {
                         replacement,
                         chain
                     })
-                } else if incin_roll < 0.0045 {
+                } else if incin_roll < 0.00045 {
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }

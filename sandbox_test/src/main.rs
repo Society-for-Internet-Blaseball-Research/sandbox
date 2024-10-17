@@ -13,10 +13,10 @@ mod schedule;
 
 fn main() {
     //edit seed
-    //let mut rng = Rng::new(69, 420);
+    let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    let mut rng = Rng::new(37, 396396396396);
+    //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
@@ -43,7 +43,7 @@ fn main() {
     //world.team_mut(team_a).mods.add(Mod::FourthStrike, ModLifetime::Season);
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
 
-    let days_in_season = 3;
+    let days_in_season = 99;
     let games = generate_games(generate_schedule(days_in_season, &divisions, &mut rng), &world, &mut rng);
     let mut sim = Sim::new(&mut world, &mut rng);
     for day in 0..days_in_season {
@@ -61,13 +61,13 @@ fn main() {
                 evt.apply(game, sim.world);
     
                 if let Event::GameOver = evt {
-                    println!(
+                    /*println!(
                         "game over! {}: {}, {}: {}",
                         sim.world.team(game.away_team.id).name,
                         game.away_team.score,
                         sim.world.team(game.home_team.id).name,
                         game.home_team.score
-                    );
+                    );*/
                     games_deactivated.push(game.id);
                 }
                 /*let base = if game.runners.base_number == 5 {
@@ -108,6 +108,10 @@ fn main() {
                 break;
             }
         }
+    }
+    for t in teams {
+        let team = world.team(t);
+        println!("{}: {}-{}", team.name, team.wins, team.losses);
     }
 
     // println!("Hello, world!");
