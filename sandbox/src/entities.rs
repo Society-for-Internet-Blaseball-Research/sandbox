@@ -293,7 +293,7 @@ impl Player {
     pub fn vibes(&self, day: usize) -> f64 {
         let frequency = 6.0 + (10.0 * self.buoyancy).round();
         // todo: sin table? do we care that much?
-        let sin_phase = PI * ((2.0 / frequency) * (day as f64) + 0.5);
+        let sin_phase = (PI * ((2.0 / frequency) * (day as f64) + 0.5)).sin();
         0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
     }
     pub fn boost(&mut self, boosts: &Vec<f64>) {
@@ -376,11 +376,11 @@ impl Team {
     fn replace_player(&mut self, id: Uuid, new_id: Uuid) {
         //todo: write this code with return
         if let Some(idx) = self.lineup.iter().position(|x| *x == id) {
-            *(self.lineup.get_mut(idx).unwrap())= new_id;
+            self.lineup[idx] = new_id;
         } else if let Some(idx) = self.rotation.iter().position(|x| *x == id) {
-            *(self.rotation.get_mut(idx).unwrap()) = new_id;
+            self.rotation[idx] = new_id;
         } else if let Some(idx) = self.shadows.iter().position(|x| *x == id) {
-            *(self.shadows.get_mut(idx).unwrap()) = new_id;
+            self.shadows[idx] = new_id;
         } else {
             panic!("player not found");
         }

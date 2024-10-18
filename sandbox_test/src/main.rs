@@ -13,10 +13,10 @@ mod schedule;
 
 fn main() {
     //edit seed
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    //let mut rng = Rng::new(37, 396396396396);
+    let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
@@ -50,6 +50,12 @@ fn main() {
         let mut games_active: Vec<Game> = Vec::new();
         for i in (day * 10)..((day + 1) * 10) {
             games_active.push(games[i].clone());
+        }
+        for i in 0..10 {
+            let home_team = sim.world.team(games_active[i].home_team.id);
+            games_active[i].home_team.pitcher = home_team.rotation[day % home_team.rotation.len()];
+            let away_team = sim.world.team(games_active[i].away_team.id);
+            games_active[i].away_team.pitcher = away_team.rotation[day % away_team.rotation.len()];
         }
         let mut games_deactivated: Vec<Uuid> = vec![];
         loop {

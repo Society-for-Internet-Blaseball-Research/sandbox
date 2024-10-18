@@ -175,9 +175,6 @@ impl Game {
                 eligible_players.push(away_team.rotation[i]);
             }
         }
-        /*if self.day == 11 {
-            println!("{:?}", eligible_players);
-        }*/
 
         let mut weights: Vec<f64> = Vec::new();
         for i in 0..eligible_players.len() {
