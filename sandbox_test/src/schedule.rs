@@ -54,6 +54,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             //debating whether to use this or a regular array with binary search
             //although a 2d array is probably needed anyway
             let mut remaining_teams: Vec<Vec<usize>> = vec![(0..5).collect(), (5..10).collect(), (10..15).collect(), (15..20).collect()];
+            //every possible order of the game in the view
             let mut orders: Vec<usize> = (0..10).collect();
 
             let mut interleague_games = 0;

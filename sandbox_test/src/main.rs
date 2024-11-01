@@ -7,16 +7,17 @@ use sandbox::{
     mods::{Mod, ModLifetime},
     Game,
 };
+use std::cmp::Ordering;
 use uuid::Uuid;
 
 mod schedule;
 
 fn main() {
     //edit seed
-    //let mut rng = Rng::new(69, 420);
+    let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    let mut rng = Rng::new(37, 396396396396);
+    //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
@@ -43,6 +44,12 @@ fn main() {
     //world.team_mut(team_a).mods.add(Mod::FourthStrike, ModLifetime::Season);
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
 
+    let mut fate_pool: Vec<usize> = (0..20).collect();
+    for i in 0..20 {
+        let fate_roll = fate_pool[rng.index(20 - i)];
+        world.team_mut(teams[i]).fate = fate_roll;
+        fate_pool.retain(|&j| j != fate_roll);
+    }
     let days_in_season = 99;
     let games = generate_games(generate_schedule(days_in_season, &divisions, &mut rng), &world, &mut rng);
     let mut sim = Sim::new(&mut world, &mut rng);
@@ -115,9 +122,67 @@ fn main() {
             }
         }
     }
-    for t in teams {
+
+    //do standings and fates need to be a vec actually
+    let mut standings: Vec<i16> = Vec::new();
+    let mut fates: Vec<usize> = Vec::new();
+    //indices of teams in the division Vec
+    let mut indices: Vec<usize> = (0..20).collect();
+    
+    for &t in divisions.iter() {
         let team = world.team(t);
+        standings.push(team.wins);
+        fates.push(team.fate);
         println!("{}: {}-{}", team.name, team.wins, team.losses);
+    }
+    
+    indices.sort_by(|&a, &b| {
+        if let Ordering::Equal = standings[b].cmp(&standings[a]) {
+            fates[a].cmp(&fates[b])
+        } else {
+            standings[b].cmp(&standings[a])
+        }
+    });
+    
+    //how many playoff teams are in each division
+    let mut division_playoffs: Vec<u8> = vec![0; 4];
+    let mut playoff_seeds1: Vec<Uuid> = Vec::new();
+    let mut playoff_seeds2: Vec<Uuid> = Vec::new();
+    for &idx in indices.iter() {
+        if idx < 10 {
+            if playoff_seeds1.len() < 4 {
+                playoff_seeds1.push(divisions[idx]);
+                division_playoffs[idx / 5] += 1;
+            }
+        } else {
+            if playoff_seeds2.len() < 4 {
+                playoff_seeds2.push(divisions[idx]);
+                division_playoffs[idx / 5] += 1;
+            }
+        }
+
+        for div in 0..4 {
+            let oppo = if div % 2 == 0 { div + 1 } else { div - 1 };
+            if division_playoffs[div] == 0 && division_playoffs[oppo] == 3 {
+                let div_winner_idx = *(indices.iter().find(|&&i| i >= div * 5 && i < (div + 1) * 5).unwrap());
+                if div < 2 {
+                    playoff_seeds1.push(divisions[div_winner_idx]);
+                } else {
+                    playoff_seeds2.push(divisions[div_winner_idx]);
+                }
+                division_playoffs[div] += 1;
+            }
+        }
+        if division_playoffs.iter().copied().reduce(|acc, e| acc + e).unwrap() == 8 {
+            break;
+        }
+    }
+
+    for team in playoff_seeds1 {
+        println!("{}", world.team(team).name);
+    }
+    for team in playoff_seeds2 {
+        println!("{}", world.team(team).name);
     }
 
     // println!("Hello, world!");
