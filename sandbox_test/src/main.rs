@@ -14,10 +14,10 @@ mod schedule;
 
 fn main() {
     //edit seed
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    //let mut rng = Rng::new(37, 396396396396);
+    let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
@@ -48,6 +48,7 @@ fn main() {
     for i in 0..20 {
         let fate_roll = fate_pool[rng.index(20 - i)];
         world.team_mut(teams[i]).fate = fate_roll;
+        //println!("{} {}", world.team(teams[i]).name, world.team(teams[i]).fate);
         fate_pool.retain(|&j| j != fate_roll);
     }
     let days_in_season = 99;
@@ -148,16 +149,19 @@ fn main() {
     let mut division_playoffs: Vec<u8> = vec![0; 4];
     let mut playoff_seeds1: Vec<Uuid> = Vec::new();
     let mut playoff_seeds2: Vec<Uuid> = Vec::new();
+    let mut indices_wc: Vec<usize> = indices.clone();
     for &idx in indices.iter() {
         if idx < 10 {
             if playoff_seeds1.len() < 4 {
                 playoff_seeds1.push(divisions[idx]);
                 division_playoffs[idx / 5] += 1;
+                indices_wc.retain(|&i| i != idx);
             }
         } else {
             if playoff_seeds2.len() < 4 {
                 playoff_seeds2.push(divisions[idx]);
                 division_playoffs[idx / 5] += 1;
+                indices_wc.retain(|&i| i != idx);
             }
         }
 
@@ -171,12 +175,17 @@ fn main() {
                     playoff_seeds2.push(divisions[div_winner_idx]);
                 }
                 division_playoffs[div] += 1;
+                indices_wc.retain(|&i| i != div_winner_idx);
             }
         }
         if division_playoffs.iter().copied().reduce(|acc, e| acc + e).unwrap() == 8 {
             break;
         }
     }
+    let indices_wc1: Vec<usize> = indices_wc.iter().copied().filter(|&i| i < 10).collect();
+    let indices_wc2: Vec<usize> = indices_wc.iter().copied().filter(|&i| i >= 10).collect();
+    playoff_seeds1.push(divisions[indices_wc1[rng.index(6)]]);
+    playoff_seeds2.push(divisions[indices_wc2[rng.index(6)]]);
 
     for team in playoff_seeds1 {
         println!("{}", world.team(team).name);
