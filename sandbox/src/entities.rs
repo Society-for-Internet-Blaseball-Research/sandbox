@@ -74,6 +74,8 @@ impl World {
             name,
             wins: 0,
             losses: 0,
+            postseason_wins: 0,
+            postseason_losses: 0,
             fate: 100,
             mods: Mods::new(),
         };
@@ -369,6 +371,8 @@ pub struct Team {
 
     pub wins: i16,
     pub losses: i16,
+    pub postseason_wins: i16,
+    pub postseason_losses: i16,
     pub fate: usize,
 
     pub mods: Mods,

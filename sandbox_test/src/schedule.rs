@@ -8,7 +8,7 @@ use sandbox::{
 };
 use uuid::Uuid;
 
-fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, world: &World) -> Game {
+pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, world: &World) -> Game {
     Game {
         id: Uuid::new_v4(),
         weather: sandbox::Weather::generate(rng),

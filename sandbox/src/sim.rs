@@ -11,7 +11,7 @@ pub trait Plugin {
 pub struct Sim<'a> {
     plugins: Vec<Box<dyn Plugin>>,
     pub world: &'a mut World,
-    rng: &'a mut Rng,
+    pub rng: &'a mut Rng,
 }
 
 impl<'a> Sim<'a> {

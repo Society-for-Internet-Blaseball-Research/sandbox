@@ -169,8 +169,13 @@ impl Event {
             Event::GameOver => {
                 let winning_team = if game.home_team.score > game.away_team.score { game.home_team.id } else { game.away_team.id };
                 let losing_team = if game.home_team.score > game.away_team.score { game.away_team.id } else { game.home_team.id };
-                world.team_mut(winning_team).wins += 1;
-                world.team_mut(losing_team).losses += 1;
+                if game.day < 99 {
+                    world.team_mut(winning_team).wins += 1;
+                    world.team_mut(losing_team).losses += 1;
+                } else {
+                    world.team_mut(winning_team).postseason_wins += 1;
+                    world.team_mut(losing_team).postseason_losses += 1;
+                }
             }
             Event::Ball => {
                 game.balls += 1;
