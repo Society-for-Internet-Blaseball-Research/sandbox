@@ -1,6 +1,7 @@
 use bases::Baserunners;
 use entities::World;
 use mods::Mod;
+use rng::Rng;
 use uuid::Uuid;
 use events::Events;
 
@@ -36,9 +37,31 @@ pub enum Weather {
     Night
 }
 
+impl Weather {
+    pub fn generate(rng: &mut Rng) -> Weather {
+        let roll = rng.next();
+        //todo: add season rulesets
+        if roll < 0.05 {
+            Weather::Eclipse
+        } else if roll < 0.1 {
+            Weather::Blooddrain
+        } else if roll < 0.4 {
+            Weather::Peanuts
+        } else if roll < 0.55 {
+            Weather::Birds
+        } else if roll < 0.7 {
+            Weather::Feedback
+        } else {
+            Weather::Reverb
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Game {
+    pub id: Uuid,
     pub weather: Weather,
+    pub day: usize,
 
     pub top: bool,
     pub inning: i16, // 1-indexed
@@ -73,7 +96,7 @@ pub struct GameTeam {
 //stealing this from Astrid
 pub struct MultiplierData {
     weather: Weather,
-    day: u8,
+    day: usize,
     runners_empty: bool,
     top: bool,
     maximum_blaseball: bool,
@@ -136,20 +159,20 @@ impl Game {
 
         let mut eligible_players = Vec::new();
         for i in 0..home_team.lineup.len() {
-            eligible_players.push(home_team.lineup[i].clone());
+            eligible_players.push(home_team.lineup[i]);
         }
         for i in 0..away_team.lineup.len() {
-            eligible_players.push(away_team.lineup[i].clone());
+            eligible_players.push(away_team.lineup[i]);
         }
         if only_current {
-            eligible_players.push(self.home_team.pitcher.clone());
-            eligible_players.push(self.away_team.pitcher.clone());
+            eligible_players.push(self.home_team.pitcher);
+            eligible_players.push(self.away_team.pitcher);
         } else {
             for i in 0..home_team.rotation.len() {
-                eligible_players.push(home_team.rotation[i].clone());
+                eligible_players.push(home_team.rotation[i]);
             }
             for i in 0..away_team.rotation.len() {
-                eligible_players.push(away_team.rotation[i].clone());
+                eligible_players.push(away_team.rotation[i]);
             }
         }
 
@@ -184,7 +207,8 @@ impl Game {
 
     pub fn get_max_strikes(&self, world: &World) -> i16 {
         let batter = world.player(self.batting_team().batter.unwrap());
-        if batter.mods.has(Mod::FourthStrike) {
+        let team = world.team(self.batting_team().id);
+        if batter.mods.has(Mod::FourthStrike) || team.mods.has(Mod::FourthStrike) {
             4
         } else {
             3
@@ -202,7 +226,7 @@ impl Game {
     pub fn compute_multiplier_data(&self, _world: &World) -> MultiplierData {
         MultiplierData {
             weather: self.weather.clone(),
-            day: 0, //todo
+            day: self.day,
             runners_empty: self.runners.empty(),
             top: self.top,
             maximum_blaseball: self.runners.iter().count() == 3, //todo: kid named fifth base

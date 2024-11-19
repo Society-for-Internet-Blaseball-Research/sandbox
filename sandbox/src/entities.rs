@@ -72,6 +72,11 @@ impl World {
             rotation: Vec::new(),
             shadows: Vec::new(),
             name,
+            wins: 0,
+            losses: 0,
+            postseason_wins: 0,
+            postseason_losses: 0,
+            fate: 100,
             mods: Mods::new(),
         };
 
@@ -91,6 +96,7 @@ impl World {
         id
     }
 
+    //CLONED UUIDS
     pub fn gen_player(&mut self, rng: &mut Rng, team: Uuid) -> Uuid {
         let mut player = Player::new(rng);
         let id = player.id;
@@ -106,6 +112,33 @@ impl World {
         player.team = Some(team.clone());
         self.insert_player(player);
         id
+    }
+}
+
+pub struct NameGen<'a> {
+    first_names: Vec<&'a str>,
+    last_names: Vec<&'a str>,
+    first_name_length: u16,
+    last_name_length: u16,
+}
+
+impl<'a> NameGen<'a> {
+    pub fn new() -> NameGen<'a> {
+        //todo: season rulesets
+        NameGen {
+            first_names: include_str!("firstnames.txt").split_whitespace().collect(),
+            last_names: include_str!("lastnames.txt").split_whitespace().collect(),
+            first_name_length: 532,
+            last_name_length: 538,
+        }
+    }
+    pub fn generate(&self, rng: &mut Rng) -> String {
+        let first_name_index = (rng.next() * self.first_name_length as f64).floor() as usize;
+        let last_name_index = (rng.next() * self.last_name_length as f64).floor() as usize;
+        let mut name = self.first_names[first_name_index].to_string();
+        name.push_str(" ");
+        name.push_str(self.last_names[last_name_index]);
+        name
     }
 }
 
@@ -263,7 +296,7 @@ impl Player {
     pub fn vibes(&self, day: usize) -> f64 {
         let frequency = 6.0 + (10.0 * self.buoyancy).round();
         // todo: sin table? do we care that much?
-        let sin_phase = PI * ((2.0 / frequency) * (day as f64) + 0.5);
+        let sin_phase = (PI * ((2.0 / frequency) * (day as f64) + 0.5)).sin();
         0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
     }
     pub fn boost(&mut self, boosts: &Vec<f64>) {
@@ -336,25 +369,25 @@ pub struct Team {
     pub rotation: Vec<Uuid>,
     pub shadows: Vec<Uuid>,
 
+    pub wins: i16,
+    pub losses: i16,
+    pub postseason_wins: i16,
+    pub postseason_losses: i16,
+    pub fate: usize,
+
     pub mods: Mods,
 }
 
 impl Team {
     fn replace_player(&mut self, id: Uuid, new_id: Uuid) {
-        let all_players = vec![&mut self.lineup, &mut self.rotation, &mut self.shadows];
-
         //todo: write this code with return
-        let mut found = false;
-        for location in all_players {
-            let position = location.iter().position(|x| *x == id);
-            if let Some(idx) = position {
-                location[idx] = new_id;
-                found = true;
-                break;
-            }
-        }
-        
-        if !found {
+        if let Some(idx) = self.lineup.iter().position(|x| *x == id) {
+            self.lineup[idx] = new_id;
+        } else if let Some(idx) = self.rotation.iter().position(|x| *x == id) {
+            self.rotation[idx] = new_id;
+        } else if let Some(idx) = self.shadows.iter().position(|x| *x == id) {
+            self.shadows[idx] = new_id;
+        } else {
             panic!("player not found");
         }
     }
@@ -449,6 +482,7 @@ impl Team {
         reverb_changes
     }
 
+    //CLONED UUIDS
     pub fn apply_reverb_changes(&mut self, reverb_type: u8, changes: &Vec<usize>) {
         let mut result: Vec<Uuid> = Vec::new();
         let lineup_length = self.lineup.len();

@@ -166,7 +166,17 @@ impl Event {
                 game.scoring_plays_inning = 0;
                 game.runners = Baserunners::new(game.get_bases(world));
             }
-            Event::GameOver => {}
+            Event::GameOver => {
+                let winning_team = if game.home_team.score > game.away_team.score { game.home_team.id } else { game.away_team.id };
+                let losing_team = if game.home_team.score > game.away_team.score { game.away_team.id } else { game.home_team.id };
+                if game.day < 99 {
+                    world.team_mut(winning_team).wins += 1;
+                    world.team_mut(losing_team).losses += 1;
+                } else {
+                    world.team_mut(winning_team).postseason_wins += 1;
+                    world.team_mut(losing_team).postseason_losses += 1;
+                }
+            }
             Event::Ball => {
                 game.balls += 1;
             }
@@ -270,17 +280,27 @@ impl Event {
                 game.outs += 1;
             },
             Event::Incineration { target, ref replacement } => {
+                println!("{} at {}, day {}, {} {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day, if game.top { "top" } else { "bot" }, game.inning);
+                println!("Incineration: {}", target);
+                println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
+                //CLONED UUIDS
                 let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
                 if let Some(batter) = game.batting_team().batter {
                     if batter == target {
                         game.batting_team_mut().batter = Some(replacement_id);
                     }
-                } else if target == game.pitching_team().pitcher {
+                }
+                if target == game.pitching_team().pitcher {
                     game.pitching_team_mut().pitcher = replacement_id;
+                } else if target == game.batting_team().pitcher {
+                    game.batting_team_mut().pitcher = replacement_id;
                 }
                 world.replace_player(target, replacement_id);
             },
             Event::Peanut { target, yummy } => {
+                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("Peanut: {}", target);
+                println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 let coeff = if yummy {
                     0.2
                 } else {
@@ -292,6 +312,8 @@ impl Event {
             },
             Event::Birds => {},
             Event::Feedback { target1, target2 } => {
+                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("Feedback: {}, {}", target1, target2);
                 if let Some(batter) = game.batting_team().batter {
                     if batter == target1 {
                         game.batting_team_mut().batter = Some(target2);
@@ -299,9 +321,18 @@ impl Event {
                         game.pitching_team_mut().pitcher = target2;
                     }
                 }
+                if target1 == game.pitching_team().pitcher {
+                    game.pitching_team_mut().pitcher = target2;
+                }
+                if game.batting_team().pitcher == target2 {
+                    game.batting_team_mut().pitcher = target1;
+                }
                 world.swap(target1, target2);
             },
             Event::Reverb { reverb_type, team, ref changes } => {
+                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("Reverb");
+                println!("Team: {}", world.team(team).name);
                 world.team_mut(team).apply_reverb_changes(reverb_type, changes);
                 if game.batting_team().id == team && reverb_type != 3 {
                     let idx = game.batting_team().batter_index;
@@ -315,6 +346,9 @@ impl Event {
                 }
             },
             Event::Blooddrain { drainer, target, stat, .. } => {
+                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("Blooddrain: {}, {}", drainer, target);
+                println!("Drainer team: {}", world.team(world.player(drainer).team.unwrap()).name);
                 let drainer_mut = world.player_mut(drainer);
                 let mut boosts: Vec<f64> = vec![0.0; 26];
                 match stat {
@@ -460,6 +494,7 @@ impl Event {
                 game.end_pa();
             },
             Event::IncinerationWithChain { target, ref replacement, chain } => {
+                //CLONED UUIDS
                 let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
                 if let Some(batter) = game.batting_team().batter {
                     if batter == target {

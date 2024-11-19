@@ -24,4 +24,8 @@ impl Rng {
 
         f64::from_bits((self.s0 >> 12) | 0x3FF0000000000000) - 1.0
     }
+
+    pub fn index(&mut self, len: usize) -> usize {
+        (self.next() * len as f64).floor() as usize
+    }
 }
