@@ -14,10 +14,10 @@ mod schedule;
 
 fn main() {
     //edit seed
-    //let mut rng = Rng::new(69, 420);
+    let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    let mut rng = Rng::new(37, 396396396396);
+    //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new();
