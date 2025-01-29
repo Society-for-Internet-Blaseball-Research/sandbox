@@ -219,7 +219,7 @@ pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_d
 }
 
 fn coeff(attr: PlayerAttr, legendary_item: &Option<LegendaryItem>, mods: &Mods, multiplier_data: &MultiplierData, stat: f64) -> f64 {
-    let mut item_stat = (stat + item(attr, legendary_item, multiplier_data));
+    let mut item_stat = stat + item(attr, legendary_item, multiplier_data);
     if attr.is_negative() {
         item_stat = item_stat.min(0.99);
     } else {

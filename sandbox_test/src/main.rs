@@ -61,9 +61,11 @@ fn main() {
         }
         for i in 0..10 {
             let home_team = sim.world.team(games_active[i].home_team.id);
-            games_active[i].home_team.pitcher = home_team.rotation[day % home_team.rotation.len()];
+            let home_pitcher = home_team.rotation[day % home_team.rotation.len()];
+            games_active[i].home_team.pitcher = if sim.world.player(home_pitcher).mods.has(Mod::Shelled) { home_team.rotation[(day - 1) % home_team.rotation.len()] } else { home_pitcher };
             let away_team = sim.world.team(games_active[i].away_team.id);
-            games_active[i].away_team.pitcher = away_team.rotation[day % away_team.rotation.len()];
+            let away_pitcher = away_team.rotation[day % away_team.rotation.len()];
+            games_active[i].away_team.pitcher = if sim.world.player(away_pitcher).mods.has(Mod::Shelled) { away_team.rotation[(day - 1) % away_team.rotation.len()] } else { away_pitcher };
         }
         let mut games_deactivated: Vec<Uuid> = vec![];
         loop {

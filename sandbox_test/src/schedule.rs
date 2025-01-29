@@ -45,7 +45,7 @@ pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, worl
 
 pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> Vec<ScheduleGame> {
     let mut schedule: Vec<ScheduleGame> = Vec::new();
-    let mut series_distr = vec![20, 130, 180]; //interleague, league, division, total
+    let series_distr = vec![20, 130, 180]; //interleague, league, division, total
     for day in 0..days {
         if day % 3 == 0 {
             println!("{}", day);
@@ -171,7 +171,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 if remaining_teams[j].len() % 2 == 1 {
                     panic!("wrong amount of teams playing interleague/interdivision matchups");
                 }
-                for k in 0..(remaining_teams[j].len() / 2) {
+                for _ in 0..(remaining_teams[j].len() / 2) {
                     let home_team_idx = rng.index(remaining_teams[j].len());
                     let mut away_team_idx = rng.index(remaining_teams[j].len() - 1);
                     //avoiding scenario of a team playing itself
