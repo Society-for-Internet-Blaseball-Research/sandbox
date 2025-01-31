@@ -48,7 +48,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
     let series_distr = vec![20, 130, 180]; //interleague, league, division, total
     for day in 0..days {
         if day % 3 == 0 {
-            println!("{}", day);
             let mut daily_games: Vec<ScheduleGame> = Vec::new(); 
             //every number is an index of the team in divisions
             //debating whether to use this or a regular array with binary search
@@ -65,7 +64,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             }
             //rounding down to even integer and checking for underflow
             interleague_games = (interleague_games / 2 * 2).min(series_distr[0]);
-            println!("{} interleague games", interleague_games);
             for j in 0..interleague_games {
                 let home_team_idx = rng.index(20 - 2 * j);
                 let mut away_team_idx = rng.index(10 - j);
@@ -109,7 +107,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             league2_interdiv_games = (league2_interdiv_games / 2 * 2 + league2_forced_interdiv)
                 .min(remaining_teams[2].len())
                 .min(remaining_teams[3].len());
-            println!("{} league games", league1_interdiv_games + league2_interdiv_games);
             for j in 0..league1_interdiv_games {
                 let mut home_team_idx = rng.index(10 - interleague_games - 2 * j);
                 let mut div1_hosts = true;
@@ -166,7 +163,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             }
 
             let div_games = 10 - interleague_games - league1_interdiv_games - league2_interdiv_games;
-            println!("{} division games", div_games);
             for j in 0..4 {
                 if remaining_teams[j].len() % 2 == 1 {
                     panic!("wrong amount of teams playing interleague/interdivision matchups");
@@ -193,7 +189,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 }
             }
             if orders.len() > 0 {
-                println!("{}", orders.len());
                 panic!("not enough daily games");
             }
             if daily_games.len() > 10 {

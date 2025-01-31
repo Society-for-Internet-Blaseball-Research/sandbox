@@ -7,10 +7,10 @@ use sandbox::{
     mods::{Mod, ModLifetime},
     Game,
 };
-use std::cmp::Ordering;
 use uuid::Uuid;
 
 mod schedule;
+mod postseason;
 
 fn main() {
     //edit seed
@@ -129,8 +129,6 @@ fn main() {
     //do standings and fates need to be a vec actually
     let mut standings: Vec<i16> = Vec::new();
     let mut fates: Vec<usize> = Vec::new();
-    //indices of teams in the division Vec
-    let mut indices: Vec<usize> = (0..20).collect();
     
     for &t in divisions.iter() {
         let team = sim.world.team(t);
@@ -138,57 +136,9 @@ fn main() {
         fates.push(team.fate);
         println!("{}: {}-{}", team.name, team.wins, team.losses);
     }
-    
-    indices.sort_by(|&a, &b| {
-        if let Ordering::Equal = standings[b].cmp(&standings[a]) {
-            fates[a].cmp(&fates[b])
-        } else {
-            standings[b].cmp(&standings[a])
-        }
-    });
-    
-    //how many playoff teams are in each division
-    let mut division_playoffs: [u8; 4] = [0; 4];
-    let mut playoff_seeds1: Vec<Uuid> = Vec::new();
-    let mut playoff_seeds2: Vec<Uuid> = Vec::new();
-    let mut indices_wc: Vec<usize> = indices.clone();
-    for &idx in indices.iter() {
-        if idx < 10 {
-            if playoff_seeds1.len() < 4 {
-                playoff_seeds1.push(divisions[idx]);
-                division_playoffs[idx / 5] += 1;
-                indices_wc.retain(|&i| i != idx);
-            }
-        } else {
-            if playoff_seeds2.len() < 4 {
-                playoff_seeds2.push(divisions[idx]);
-                division_playoffs[idx / 5] += 1;
-                indices_wc.retain(|&i| i != idx);
-            }
-        }
 
-        for div in 0..4 {
-            let oppo = if div % 2 == 0 { div + 1 } else { div - 1 };
-            if division_playoffs[div] == 0 && division_playoffs[oppo] == 3 {
-                let div_winner_idx = *(indices.iter().find(|&&i| i >= div * 5 && i < (div + 1) * 5).unwrap());
-                if div < 2 {
-                    playoff_seeds1.push(divisions[div_winner_idx]);
-                } else {
-                    playoff_seeds2.push(divisions[div_winner_idx]);
-                }
-                division_playoffs[div] += 1;
-                indices_wc.retain(|&i| i != div_winner_idx);
-            }
-        }
-        if division_playoffs[0] + division_playoffs[1] + division_playoffs[2] + division_playoffs[3] == 8 {
-            break;
-        }
-    }
-    let indices_wc1: Vec<usize> = indices_wc.iter().copied().filter(|&i| i < 10).collect();
-    let indices_wc2: Vec<usize> = indices_wc.iter().copied().filter(|&i| i >= 10).collect();
-    playoff_seeds1.push(divisions[indices_wc1[sim.rng.index(6)]]);
-    playoff_seeds2.push(divisions[indices_wc2[sim.rng.index(6)]]);
-
+    let (mut playoff_seeds1, mut playoff_seeds2) = postseason::generate_seeding(&divisions, &standings, &fates, sim.world, sim.rng);
+    
     for team in playoff_seeds1.iter() {
         println!("{}", sim.world.team(*team).name);
     }
@@ -196,34 +146,11 @@ fn main() {
         println!("{}", sim.world.team(*team).name);
     }
     
-    //let mut postseason_wins: [u8; 10] = [0; 10];
     //todo: make this a method with sim either as instance or parameter
     for i in 0..3 {
-        let mut games_active: Vec<Game> = Vec::new();
+        let mut games_active: Vec<Game> = postseason::generate_wildcard(&playoff_seeds1, &playoff_seeds2, i, sim.world, sim.rng);
         let mut games_deactivated: Vec<Uuid> = Vec::new();
-        let higher_seed_hosts = i % 2 == 0;
-        let wins_1_4 = sim.world.team(playoff_seeds1[3]).postseason_wins;
-        let wins_1_5 = sim.world.team(playoff_seeds1[4]).postseason_wins;
-        let wins_2_4 = sim.world.team(playoff_seeds2[3]).postseason_wins;
-        let wins_2_5 = sim.world.team(playoff_seeds2[4]).postseason_wins;
-        if wins_1_4 < 2 && wins_1_5 < 2 || wins_1_4 == wins_1_5 {
-            games_active.push(generate_game(
-                    playoff_seeds1[if higher_seed_hosts { 3 } else { 4 }],
-                    playoff_seeds1[if higher_seed_hosts { 4 } else { 3 }],
-                    99 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
-        if wins_2_4 < 2 && wins_2_5 < 2 || wins_2_4 == wins_2_5 {
-            games_active.push(generate_game(
-                    playoff_seeds2[if higher_seed_hosts { 3 } else { 4 }],
-                    playoff_seeds2[if higher_seed_hosts { 4 } else { 3 }],
-                    99 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
+        
         loop {
             for game in games_active.iter_mut() {
                 let evt = sim.next(game);
@@ -256,53 +183,8 @@ fn main() {
     });
 
     for i in 0..5 {
-        let mut games_active: Vec<Game> = Vec::new();
+        let mut games_active: Vec<Game> = postseason::generate_divisional(&playoff_seeds1, &playoff_seeds2, i, sim.world, sim.rng);
         let mut games_deactivated: Vec<Uuid> = Vec::new();
-        let higher_seed_hosts = i % 2 == 0;
-        let mut wins_1 = [0; 4];
-        for j in 0..4 {
-            wins_1[j] = sim.world.team(playoff_seeds1[j]).postseason_wins;
-        }
-        let mut wins_2 = [0; 4];
-        for j in 0..4 {
-            wins_2[j] = sim.world.team(playoff_seeds2[j]).postseason_wins;
-        }
-        if wins_1[0] < 3 && wins_1[3] < 3 || wins_1[0] == wins_1[3] {
-            games_active.push(generate_game(
-                    playoff_seeds1[if higher_seed_hosts { 0 } else { 3 }],
-                    playoff_seeds1[if higher_seed_hosts { 3 } else { 0 }],
-                    102 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
-        if wins_1[1] < 3 && wins_1[2] < 3 || wins_1[1] == wins_1[2] {
-            games_active.push(generate_game(
-                    playoff_seeds1[if higher_seed_hosts { 1 } else { 2 }],
-                    playoff_seeds1[if higher_seed_hosts { 2 } else { 1 }],
-                    102 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
-        if wins_2[0] < 3 && wins_2[3] < 3 || wins_2[0] == wins_2[3] {
-            games_active.push(generate_game(
-                    playoff_seeds2[if higher_seed_hosts { 0 } else { 3 }],
-                    playoff_seeds2[if higher_seed_hosts { 3 } else { 0 }],
-                    102 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
-        if wins_2[1] < 3 && wins_2[2] < 3 || wins_2[1] == wins_2[2] {
-            games_active.push(generate_game(
-                    playoff_seeds2[if higher_seed_hosts { 1 } else { 2 }],
-                    playoff_seeds2[if higher_seed_hosts { 2 } else { 1 }],
-                    102 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
         loop {
             for game in games_active.iter_mut() {
                 let evt = sim.next(game);
@@ -337,37 +219,10 @@ fn main() {
         sim.world.team_mut(t).postseason_losses = 0;
         wins > losses
     });
-    
+   
     for i in 0..5 {
-        let mut games_active: Vec<Game> = Vec::new();
+        let mut games_active: Vec<Game> = postseason::generate_championship(&playoff_seeds1, &playoff_seeds2, i, sim.world, sim.rng);
         let mut games_deactivated: Vec<Uuid> = Vec::new();
-        let higher_seed_hosts = i % 2 == 0;
-        let mut wins_1 = [0; 2];
-        for j in 0..2 {
-            wins_1[j] = sim.world.team(playoff_seeds1[j]).postseason_wins;
-        }
-        let mut wins_2 = [0; 2];
-        for j in 0..2 {
-            wins_2[j] = sim.world.team(playoff_seeds2[j]).postseason_wins;
-        }
-        if wins_1[0] < 3 && wins_1[1] < 3 || wins_1[0] == wins_1[1] {
-            games_active.push(generate_game(
-                    playoff_seeds1[if higher_seed_hosts { 0 } else { 1 }],
-                    playoff_seeds1[if higher_seed_hosts { 1 } else { 0 }],
-                    107 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
-        if wins_2[0] < 3 && wins_2[1] < 3 || wins_2[0] == wins_2[1] {
-            games_active.push(generate_game(
-                    playoff_seeds2[if higher_seed_hosts { 0 } else { 1 }],
-                    playoff_seeds2[if higher_seed_hosts { 1 } else { 0 }],
-                    107 + i as usize,
-                    sim.rng,
-                    sim.world
-            ));
-        }
         loop {
             for game in games_active.iter_mut() {
                 let evt = sim.next(game);
