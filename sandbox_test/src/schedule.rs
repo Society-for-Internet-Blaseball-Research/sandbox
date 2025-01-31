@@ -162,7 +162,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 orders.retain(|&n| n != order);               
             }
 
-            let div_games = 10 - interleague_games - league1_interdiv_games - league2_interdiv_games;
             for j in 0..4 {
                 if remaining_teams[j].len() % 2 == 1 {
                     panic!("wrong amount of teams playing interleague/interdivision matchups");

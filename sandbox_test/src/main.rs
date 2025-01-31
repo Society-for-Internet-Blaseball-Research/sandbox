@@ -43,6 +43,7 @@ fn main() {
     //edit mods and legendary items
     //world.team_mut(team_a).mods.add(Mod::FourthStrike, ModLifetime::Season);
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
+    assert!(world.team(divisions[0]).lineup[0] == world.team_name(String::from("Baltimore Crabs")).lineup[0]);
 
     let mut fate_pool: Vec<usize> = (0..20).collect();
     for i in 0..20 {
@@ -137,7 +138,7 @@ fn main() {
         println!("{}: {}-{}", team.name, team.wins, team.losses);
     }
 
-    let (mut playoff_seeds1, mut playoff_seeds2) = postseason::generate_seeding(&divisions, &standings, &fates, sim.world, sim.rng);
+    let (mut playoff_seeds1, mut playoff_seeds2) = postseason::generate_seeding(&divisions, &standings, &fates, sim.rng);
     
     for team in playoff_seeds1.iter() {
         println!("{}", sim.world.team(*team).name);

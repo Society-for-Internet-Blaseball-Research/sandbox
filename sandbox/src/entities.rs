@@ -26,12 +26,30 @@ impl World {
         self.teams.get(&id).unwrap()
     }
 
+    pub fn team_name(&self, name: String) -> &Team {
+        for (_, team) in self.teams.iter() {
+            if *team.name == name {
+                return team;
+            }
+        }
+        panic!("team name not found");
+    }
+
     pub fn player_mut(&mut self, id: Uuid) -> &mut Player {
         self.players.get_mut(&id).unwrap()
     }
 
     pub fn team_mut(&mut self, id: Uuid) -> &mut Team {
         self.teams.get_mut(&id).unwrap()
+    }
+
+    pub fn team_name_mut(&mut self, name: String) -> &mut Team {
+        for (_, team) in self.teams.iter_mut() {
+            if *team.name == name {
+                return team;
+            }
+        }
+        panic!("team name not found");
     }
 
     pub fn insert_player(&mut self, player: Player) {

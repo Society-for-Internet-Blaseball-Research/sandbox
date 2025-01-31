@@ -3,7 +3,7 @@ use crate::schedule::generate_game;
 use uuid::Uuid;
 use std::cmp::Ordering;
 
-pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usize>, world: &World, rng: &mut Rng) -> (Vec<Uuid>, Vec<Uuid>) {
+pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usize>, rng: &mut Rng) -> (Vec<Uuid>, Vec<Uuid>) {
     //indices of teams in the division Vec
     let mut indices: Vec<usize> = (0..20).collect();
     
