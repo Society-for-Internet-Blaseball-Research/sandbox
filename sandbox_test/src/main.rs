@@ -42,6 +42,7 @@ fn main() {
 
     //edit mods and legendary items
     //world.team_mut(team_a).mods.add(Mod::FourthStrike, ModLifetime::Season);
+    //world.player_mut(world.team_name(String::from("Miami Dale")).lineup[4]).mods.add(Mod::Electric, ModLifetime::Game);
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
     assert!(world.team(divisions[0]).lineup[0] == world.team_name(String::from("Baltimore Crabs")).lineup[0]);
 
@@ -124,6 +125,10 @@ fn main() {
             if games_active.len() == 0 {
                 break;
             }
+        }
+        sim.world.clear_game();
+        if day % 9 == 8 {
+            sim.world.clear_weekly();
         }
     }
 
@@ -295,5 +300,7 @@ fn main() {
 
     println!("Internet Series: {} {}-{} {}", sim.world.team(playoff_seeds1[0]).name, sim.world.team(playoff_seeds1[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).name);
     
+    sim.world.clear_season();
+
     // println!("Hello, world!");
 }

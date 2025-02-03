@@ -527,6 +527,9 @@ impl Event {
                 game.end_pa();
             },
             Event::BigPeanut { target } => {
+                println!("{} at {}, day {}, {} {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day, if game.top { "top" } else { "bot" }, game.inning);
+                println!("Shelled by big peanut: {}", target);
+                println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
             },
             Event::Repeating { batter } => {

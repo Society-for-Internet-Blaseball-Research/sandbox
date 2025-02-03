@@ -131,6 +131,24 @@ impl World {
         self.insert_player(player);
         id
     }
+
+    pub fn clear_game(&mut self) {
+        for (_, player) in self.players.iter_mut() {
+            player.mods.clear_game();
+        }
+    }
+    
+    pub fn clear_weekly(&mut self) {
+        for (_, player) in self.players.iter_mut() {
+            player.mods.clear_weekly();
+        }
+    }
+
+    pub fn clear_season(&mut self) {
+        for (_, player) in self.players.iter_mut() {
+            player.mods.clear_season();
+        }
+    }
 }
 
 pub struct NameGen<'a> {
