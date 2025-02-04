@@ -8,14 +8,16 @@ pub struct World {
     pub players: BTreeMap<Uuid, Player>,
     pub teams: BTreeMap<Uuid, Team>,
     pub stadiums: BTreeMap<Uuid, Stadium>,
+    pub season_ruleset: u8,
 }
 
 impl World {
-    pub fn new() -> World {
+    pub fn new(season_ruleset: u8) -> World {
         World {
             players: BTreeMap::new(),
             teams: BTreeMap::new(),
             stadiums: BTreeMap::new(),
+            season_ruleset
         }
     }
     pub fn player(&self, id: Uuid) -> &Player {

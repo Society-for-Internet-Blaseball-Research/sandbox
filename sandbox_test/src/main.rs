@@ -20,7 +20,7 @@ fn main() {
     //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
-    let mut world = World::new();
+    let mut world = World::new(11); //0-indexed season number
     //let name_gen = NameGen::new();
     let mut teams: Vec<Uuid> = Vec::new();
     let team_names: Vec<&str> = include_str!("teams.txt").split(",").collect();

@@ -182,14 +182,15 @@ impl Plugin for BasePlugin {
 fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let pitcher = world.player(game.pitching_team().pitcher);
     let batter = world.player(game.batting_team().batter.unwrap());
+    let ruleset = world.season_ruleset;
 
     let is_flinching = game.strikes == 0 && batter.mods.has(Mod::Flinch);
 
     let multiplier_data = &game.compute_multiplier_data(world);
 
-    let is_strike = rng.next() < formulas::strike_threshold(pitcher, batter, is_flinching, multiplier_data);
+    let is_strike = rng.next() < formulas::strike_threshold(pitcher, batter, is_flinching, ruleset, multiplier_data);
     let does_swing = if !is_flinching {
-        rng.next() < formulas::swing_threshold(pitcher, batter, is_strike, multiplier_data)
+        rng.next() < formulas::swing_threshold(pitcher, batter, is_strike, ruleset, multiplier_data)
     } else {
         false
     };
@@ -202,12 +203,12 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         }
     }
 
-    let does_contact = rng.next() < formulas::contact_threshold(pitcher, batter, is_strike, multiplier_data);
+    let does_contact = rng.next() < formulas::contact_threshold(pitcher, batter, is_strike, ruleset, multiplier_data);
     if !does_contact {
         return PitchOutcome::StrikeSwinging;
     }
 
-    let is_foul = rng.next() < formulas::foul_threshold(pitcher, batter, multiplier_data);
+    let is_foul = rng.next() < formulas::foul_threshold(pitcher, batter, ruleset, multiplier_data);
     if is_foul {
         return PitchOutcome::Foul;
     }
@@ -215,12 +216,12 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let out_defender_id = game.pick_fielder(world, rng.next());
     let out_defender = world.player(out_defender_id);
 
-    let is_out = rng.next() > formulas::out_threshold(pitcher, batter, out_defender, multiplier_data);
+    let is_out = rng.next() > formulas::out_threshold(pitcher, batter, out_defender, ruleset, multiplier_data);
     if is_out {
         let fly_defender_id = game.pick_fielder(world, rng.next());
         let fly_defender = world.player(fly_defender_id);
 
-        let is_fly = rng.next() < formulas::fly_threshold(fly_defender, multiplier_data);
+        let is_fly = rng.next() < formulas::fly_threshold(fly_defender, ruleset, multiplier_data);
         if is_fly {
             let mut advancing_runners = Vec::new();
             for baserunner in game.runners.iter() {
@@ -228,7 +229,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
                 let runner_id = baserunner.id.clone();
                 let runner = world.player(runner_id);
 
-                if rng.next() < formulas::flyout_advancement_threshold(runner, base_from, multiplier_data) {
+                if rng.next() < formulas::flyout_advancement_threshold(runner, base_from, ruleset, multiplier_data) {
                     advancing_runners.push(runner_id);
                 }
             }
@@ -244,17 +245,17 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         if !game.runners.empty() {
             let dp_roll = rng.next();
             if game.runners.occupied(0) {
-                if game.outs < 2 && dp_roll < formulas::double_play_threshold(batter, pitcher, out_defender, multiplier_data) {
+                if game.outs < 2 && dp_roll < formulas::double_play_threshold(batter, pitcher, out_defender, ruleset, multiplier_data) {
                     return PitchOutcome::DoublePlay {
                         runner_out: game.runners.pick_runner(rng.next())
                     };
                 } else {
                     let sac_roll = rng.next();
-                    if sac_roll < formulas::groundout_sacrifice_threshold(batter, multiplier_data) {
+                    if sac_roll < formulas::groundout_sacrifice_threshold(batter, ruleset, multiplier_data) {
                         for baserunner in game.runners.iter() {
                             let runner_id = baserunner.id.clone();
                             let runner = world.player(runner_id);
-                            if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender, multiplier_data) {
+                            if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender, ruleset, multiplier_data) {
                                 advancing_runners.push(runner_id);
                             }
                         }
@@ -272,7 +273,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
             for baserunner in game.runners.iter() {
                 let runner_id = baserunner.id.clone();
                 let runner = world.player(runner_id);
-                if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender, multiplier_data) {
+                if rng.next() < formulas::groundout_advancement_threshold(runner, out_defender, ruleset, multiplier_data) {
                     advancing_runners.push(runner_id);
                 }
             }
@@ -283,7 +284,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         };
     }
 
-    let is_hr = rng.next() < formulas::hr_threshold(pitcher, batter, multiplier_data);
+    let is_hr = rng.next() < formulas::hr_threshold(pitcher, batter, ruleset, multiplier_data);
     if is_hr {
         return PitchOutcome::HomeRun;
     }
@@ -302,23 +303,23 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         let runner_id = baserunner.id.clone();
         let runner = world.player(runner_id);
 
-        if rng.next() < formulas::hit_advancement_threshold(runner, hit_defender, multiplier_data) {
+        if rng.next() < formulas::hit_advancement_threshold(runner, hit_defender, ruleset, multiplier_data) {
             advancing_runners.push(runner_id);
         }
     }
 
-    if quadruple_roll < formulas::quadruple_threshold(pitcher, batter, hit_defender, multiplier_data) {
+    if quadruple_roll < formulas::quadruple_threshold(pitcher, batter, hit_defender, ruleset, multiplier_data) {
         return PitchOutcome::Quadruple {
             advancing_runners
         };
     }
 
-    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender, multiplier_data) {
+    if triple_roll < formulas::triple_threshold(pitcher, batter, hit_defender, ruleset, multiplier_data) {
         return PitchOutcome::Triple {
             advancing_runners
         };
     }
-    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender, multiplier_data) {
+    if double_roll < formulas::double_threshold(pitcher, batter, hit_defender, ruleset, multiplier_data) {
         return PitchOutcome::Double {
             advancing_runners
         };
@@ -489,14 +490,14 @@ impl Plugin for WeatherPlugin {
                         replacement,
                         chain
                     })
-                } else if incin_roll < 0.00045 {
+                } else if incin_roll < 0.00045 { //rulesets
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
                     let minimized = poll_for_mod(game, world, Mod::Minimized, false);
                     if minimized.len() > 0 {
                         if minimized.len() > 1 { 
-                            //I'm assuming that there's
+                            //assuming that there's
                             //no more than one legendary item of each kind
                             //at any point in the sim
                             todo!()
@@ -558,7 +559,7 @@ impl Plugin for WeatherPlugin {
                 let mut target1_opt = None;
                 let mut target2_opt = None;
 
-                if is_batter && world.player(batter).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055 {
+                if is_batter && world.player(batter).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055 { //rulesets
                     let target2_raw = game.pick_fielder(world, rng.next());
                     
                     target1_opt = Some(batter);
@@ -626,7 +627,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Reverb => {
                 //estimate
-                if rng.next() < 0.00003 {
+                if rng.next() < 0.00003 { //rulesets
                     let reverb_type_roll = rng.next();
                     let reverb_type = if reverb_type_roll < 0.09 {
                         0u8
@@ -670,7 +671,7 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Blooddrain => {
-                if rng.next() < 0.00065 {
+                if rng.next() < 0.00065 { //rulesets
                     let fielding_team_drains = rng.next() < 0.5;
                     let is_atbat = rng.next() < 0.5;
                     if is_atbat {
@@ -721,7 +722,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Salmon => None,
             Weather::PolarityPlus | Weather::PolarityMinus => {
-                if rng.next() < 0.035 {
+                if rng.next() < 0.035 { //rulesets
                     Some(Event::PolaritySwitch)
                 } else {
                     None
@@ -788,6 +789,7 @@ impl Plugin for ExtraWeatherPlugin {
 struct ModPlugin;
 impl Plugin for ModPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        //this whole function? rulesets
         let batter = game.batting_team().batter.unwrap();
         let batter_mods = &world.player(batter).mods;
         let pitcher = game.pitching_team().pitcher;
