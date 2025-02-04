@@ -132,6 +132,8 @@ pub enum Event {
     },
     CharmWalk,
     CharmStrikeout,
+    MildPitch,
+    MildWalk,
     Repeating {
         batter: Uuid,
     }
@@ -532,6 +534,18 @@ impl Event {
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
             },
+            Event::MildPitch => {
+                game.balls += 1;
+                game.runners.advance_all(1);
+                game.base_sweep();
+            },
+            Event::MildWalk => {
+                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                game.runners.advance_all(1);
+                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.base_sweep();
+                game.end_pa();
+            }
             Event::Repeating { batter } => {
                 let bt = game.batting_team_mut();
                 bt.batter_index -= 1;
@@ -586,6 +600,8 @@ impl Event {
             Event::BigPeanut { .. } => "bigPeanut",
             Event::CharmWalk => "charmWalk",
             Event::CharmStrikeout => "charmStrikeout",
+            Event::MildPitch => "mildPitch",
+            Event::MildWalk => "mildWalk",
             Event::Repeating { .. } => "repeating",
         };
         String::from(ev)

@@ -8,6 +8,7 @@ use sandbox::{
 };
 use uuid::Uuid;
 
+//unfortunately rng and world are not in standard order here
 pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, world: &World) -> Game {
     Game {
         id: Uuid::new_v4(),

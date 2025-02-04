@@ -3,6 +3,7 @@
 pub enum Mod {
     TargetedShame,
     Flinch,
+    Mild,
     Reverberating,
     Fireproof,
     Soundproof,

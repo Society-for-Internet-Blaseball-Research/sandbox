@@ -14,7 +14,7 @@ mod postseason;
 
 fn main() {
     //edit seed
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
     //let mut rng = Rng::new(37, 396396396396);
@@ -44,8 +44,8 @@ fn main() {
     //world.team_mut(team_a).mods.add(Mod::FourthStrike, ModLifetime::Season);
     //world.player_mut(world.team_name(String::from("Miami Dale")).lineup[4]).mods.add(Mod::Electric, ModLifetime::Game);
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
-    assert!(world.team(divisions[0]).lineup[0] == world.team_name(String::from("Baltimore Crabs")).lineup[0]);
-
+    world.player_mut(world.team_name(String::from("Charleston Shoe Thieves")).rotation[0]).mods.add(Mod::Mild, ModLifetime::Permanent);
+    
     let mut fate_pool: Vec<usize> = (0..20).collect();
     for i in 0..20 {
         let fate_roll = fate_pool[rng.index(20 - i)];
@@ -53,9 +53,9 @@ fn main() {
         //println!("{} {}", world.team(teams[i]).name, world.team(teams[i]).fate);
         fate_pool.retain(|&j| j != fate_roll);
     }
-    let days_in_season = 99;
-    let games = generate_games(generate_schedule(days_in_season, &divisions, &mut rng), &world, &mut rng);
     let mut sim = Sim::new(&mut world, &mut rng);
+    /*let days_in_season = 99;
+    let games = generate_games(generate_schedule(days_in_season, &divisions, &mut rng), &world, &mut rng);
     for day in 0..days_in_season {
         let mut games_active: Vec<Game> = Vec::new();
         for i in (day * 10)..((day + 1) * 10) {
@@ -300,7 +300,57 @@ fn main() {
 
     println!("Internet Series: {} {}-{} {}", sim.world.team(playoff_seeds1[0]).name, sim.world.team(playoff_seeds1[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).name);
     
-    sim.world.clear_season();
+    sim.world.clear_season();*/
+    
+    //todo: id by name function
+    let mut game = generate_game(divisions[15], divisions[0], 0, sim.rng, sim.world); 
+    loop {
+        let evt = sim.next(&game);
+        evt.apply(&mut game, sim.world);
+
+        if let Event::GameOver = evt {
+            println!(
+                "game over! {}: {}, {}: {}",
+                sim.world.team(game.away_team.id).name,
+                game.away_team.score,
+                sim.world.team(game.home_team.id).name,
+                game.home_team.score
+            );
+            break;
+        }
+        let base = if game.runners.base_number == 5 {
+            format!(
+            "[{}|{}|{}|{}]",
+            if game.runners.occupied(3) { "X" } else { " " },
+            if game.runners.occupied(2) { "X" } else { " " },
+            if game.runners.occupied(1) { "X" } else { " " },
+            if game.runners.occupied(0) { "X" } else { " " }
+            )
+        } else {
+            format!(
+            "[{}|{}|{}]",
+            if game.runners.occupied(2) { "X" } else { " " },
+            if game.runners.occupied(1) { "X" } else { " " },
+            if game.runners.occupied(0) { "X" } else { " " }
+            )
+        };
+
+        let away_score = (game.away_team.score * 10.0).round() / 10.0;
+        let home_score = (game.home_team.score * 10.0).round() / 10.0; //floats
+
+        println!(
+            "{}{} {}@{} ({}b/{}s/{}o) {} {:?}",
+            if game.top { "t" } else { "b" },
+            game.inning,
+            away_score,
+            home_score,
+            game.balls,
+            game.strikes,
+            game.outs,
+            base,
+            evt
+        );
+    }
 
     // println!("Hello, world!");
 }

@@ -804,6 +804,12 @@ impl Plugin for ModPlugin {
             return Some(Event::HitByPitch { target: batter, hbp_type: 1 });
         } else if pitcher_mods.has(Mod::ConsolidatedDebt) && !batter_mods.has(Mod::Repeating) && rng.next() < 0.02 { //estimate
             return Some(Event::HitByPitch { target: batter, hbp_type: 2 });
+        } else if rng.next() < 0.005 && pitcher_mods.has(Mod::Mild) {
+            if game.balls == 3 {
+                return Some(Event::MildWalk);
+            } else {
+                return Some(Event::MildPitch);
+            }
         } else if game.balls == 0 && game.strikes == 0 {
             if batter_mods.has(Mod::Charm) && rng.next() < 0.015 {
                 return Some(Event::CharmWalk);
