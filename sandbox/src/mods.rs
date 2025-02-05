@@ -30,7 +30,8 @@ pub enum Mod {
     Repeating,
     FifthBase,
     Charm,
-    SuperFlickering //not bothering to type the actual mod name correctly
+    SuperFlickering, //not bothering to type the actual mod name correctly
+    Traveling
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

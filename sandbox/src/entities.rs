@@ -213,6 +213,9 @@ pub enum PlayerAttr {
 }
 
 impl PlayerAttr {
+    pub fn discr(&self) -> u8 {
+        *self as u8
+    }
     pub fn is_batting(&self) -> bool {
         let discr = *self as u8;
         discr < 8

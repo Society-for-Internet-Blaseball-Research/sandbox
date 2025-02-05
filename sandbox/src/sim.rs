@@ -221,7 +221,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         let fly_defender_id = game.pick_fielder(world, rng.next());
         let fly_defender = world.player(fly_defender_id);
 
-        let is_fly = rng.next() < formulas::fly_threshold(fly_defender, ruleset, multiplier_data);
+        let is_fly = rng.next() < formulas::fly_threshold(batter, pitcher, ruleset, multiplier_data);
         if is_fly {
             let mut advancing_runners = Vec::new();
             for baserunner in game.runners.iter() {
@@ -467,7 +467,7 @@ impl Plugin for WeatherPlugin {
                     let minimized = poll_for_mod(game, world, Mod::Minimized, false);
                     if minimized.len() > 0 {
                         if minimized.len() > 1 { 
-                            //I'm assuming that there's
+                            //assuming that there's
                             //no more than one legendary item of each kind
                             //at any point in the sim
                             todo!()

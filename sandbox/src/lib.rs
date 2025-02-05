@@ -1,6 +1,6 @@
 use bases::Baserunners;
 use entities::World;
-use mods::Mod;
+use mods::{Mod, Mods};
 use rng::Rng;
 use uuid::Uuid;
 use events::Events;
@@ -95,6 +95,8 @@ pub struct GameTeam {
 
 //stealing this from Astrid
 pub struct MultiplierData {
+    batting_team_mods: Mods,
+    pitching_team_mods: Mods,
     weather: Weather,
     day: usize,
     runners_empty: bool,
@@ -223,8 +225,12 @@ impl Game {
         }
     }
 
-    pub fn compute_multiplier_data(&self, _world: &World) -> MultiplierData {
+    pub fn compute_multiplier_data(&self, world: &World) -> MultiplierData {
         MultiplierData {
+            //someone who knows about lifetimes more than me can probably
+            //make this code more efficient
+            batting_team_mods: world.team(self.batting_team().id).mods.clone(),
+            pitching_team_mods: world.team(self.pitching_team().id).mods.clone(), 
             weather: self.weather.clone(),
             day: self.day,
             runners_empty: self.runners.empty(),
