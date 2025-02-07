@@ -58,9 +58,6 @@ fn main() {
     let days_in_season = 99;
     let games = generate_games(generate_schedule(days_in_season, &divisions, sim.rng), sim.world, sim.rng);
     for day in 0..days_in_season {
-        if day == 72 {
-            //sim.world.player_mut(sim.world.team_name(String::from("Charleston Shoe Thieves")).lineup[5]).mods.add(Mod::Haunted, ModLifetime::Permanent);
-        }
         let mut games_active: Vec<Game> = Vec::new();
         for i in (day * 10)..((day + 1) * 10) {
             games_active.push(games[i].clone());

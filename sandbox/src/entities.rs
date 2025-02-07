@@ -86,27 +86,6 @@ impl World {
         team2.replace_player(player2_id, player1_id);
     }
 
-    pub fn swap_inhabit(&mut self, active_id: Uuid, hall_id: Uuid) {
-        let team_id = self.player(active_id).team.unwrap();
-        let active = self.player_mut(active_id);
-        let hall = self.player_mut(hall_id);
-        hall.inhabiting = Some(active_id);
-        let team = self.team_mut(team_id);
-        team.replace_player(active_id, hall_id);
-    }
-
-    pub fn swap_back(&mut self, active_id: Uuid, hall_id: Uuid) {
-        let player_is_ghost = self.player(hall_id).inhabiting.is_some();
-        if player_is_ghost {
-            let team_id = self.player(active_id).team.unwrap();
-            let active = self.player_mut(active_id);
-            let hall = self.player_mut(hall_id);
-            hall.inhabiting = None;
-            let team = self.team_mut(team_id);
-            team.replace_player(hall_id, active_id);
-        }
-    }
-
     pub fn gen_team(&mut self, rng: &mut Rng, name: String, emoji: String) -> Uuid {
         let id = Uuid::new_v4();
         let mut team = Team {
@@ -140,7 +119,6 @@ impl World {
         id
     }
 
-    //CLONED UUIDS
     pub fn gen_player(&mut self, rng: &mut Rng, team: Uuid) -> Uuid {
         let mut player = Player::new(rng);
         let id = player.id;
@@ -283,7 +261,7 @@ pub struct Player {
     pub mods: Mods,
     pub legendary_item: Option<LegendaryItem>,
     pub team: Option<Uuid>, //ig
-    pub inhabiting: Option<Uuid>,
+    //pub inhabiting: Option<Uuid>,
     
     pub feed: Events,
 
@@ -332,7 +310,6 @@ impl Player {
             mods: Mods::new(),
             legendary_item: None,
             team: None,
-            inhabiting: None,
 
             feed: Events::new(),
 
@@ -554,7 +531,6 @@ impl Team {
         reverb_changes
     }
 
-    //CLONED UUIDS
     pub fn apply_reverb_changes(&mut self, reverb_type: u8, changes: &Vec<usize>) {
         let mut result: Vec<Uuid> = Vec::new();
         let lineup_length = self.lineup.len();
