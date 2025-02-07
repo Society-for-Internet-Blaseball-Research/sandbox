@@ -31,7 +31,8 @@ pub enum Mod {
     FifthBase,
     Charm,
     SuperFlickering, //not bothering to type the actual mod name correctly
-    Traveling
+    Traveling,
+    Haunted
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

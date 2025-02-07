@@ -14,8 +14,8 @@ mod postseason;
 
 fn main() {
     //edit seed
-    let mut rng = Rng::new(69, 420);
-    //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
+    //let mut rng = Rng::new(69, 420);
+    let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
     //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
@@ -55,9 +55,12 @@ fn main() {
         fate_pool.retain(|&j| j != fate_roll);
     }
     let mut sim = Sim::new(&mut world, &mut rng);
-    /*let days_in_season = 99;
-    let games = generate_games(generate_schedule(days_in_season, &divisions, &mut rng), &world, &mut rng);
+    let days_in_season = 99;
+    let games = generate_games(generate_schedule(days_in_season, &divisions, sim.rng), sim.world, sim.rng);
     for day in 0..days_in_season {
+        if day == 72 {
+            //sim.world.player_mut(sim.world.team_name(String::from("Charleston Shoe Thieves")).lineup[5]).mods.add(Mod::Haunted, ModLifetime::Permanent);
+        }
         let mut games_active: Vec<Game> = Vec::new();
         for i in (day * 10)..((day + 1) * 10) {
             games_active.push(games[i].clone());
@@ -301,10 +304,14 @@ fn main() {
 
     println!("Internet Series: {} {}-{} {}", sim.world.team(playoff_seeds1[0]).name, sim.world.team(playoff_seeds1[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).name);
     
-    sim.world.clear_season();*/
+    sim.world.clear_season();
     
     //todo: id by name function
-    let mut game = generate_game(divisions[16], divisions[12], 0, sim.rng, sim.world); 
+    /*let mut game = generate_game(divisions[0], divisions[15], 0, sim.rng, sim.world); 
+    let ghost = sim.world.gen_player(sim.rng, Uuid::new_v4());
+    sim.world.player_mut(ghost).team = None;
+    sim.world.hall.push(ghost);
+    sim.world.player_mut(sim.world.team_name(String::from("Charleston Shoe Thieves")).lineup[5]).mods.add(Mod::Haunted, ModLifetime::Permanent);
     loop {
         let evt = sim.next(&game);
         evt.apply(&mut game, sim.world);
@@ -351,7 +358,7 @@ fn main() {
             base,
             evt
         );
-    }
+    }*/
 
     // println!("Hello, world!");
 }

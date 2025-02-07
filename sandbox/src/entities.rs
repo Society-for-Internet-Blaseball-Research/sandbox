@@ -8,6 +8,7 @@ pub struct World {
     pub players: BTreeMap<Uuid, Player>,
     pub teams: BTreeMap<Uuid, Team>,
     pub stadiums: BTreeMap<Uuid, Stadium>,
+    pub hall: Vec<Uuid>, //think of this as a view into a section of players
     pub season_ruleset: u8,
 }
 
@@ -17,6 +18,7 @@ impl World {
             players: BTreeMap::new(),
             teams: BTreeMap::new(),
             stadiums: BTreeMap::new(),
+            hall: Vec::new(),
             season_ruleset
         }
     }
@@ -66,6 +68,7 @@ impl World {
         let player = self.player_mut(player_id);
         let team_id = player.team.unwrap();
         player.team = None;
+        self.hall.push(player_id);
         let team = self.team_mut(team_id);
         team.replace_player(player_id, new_player_id);
     }
@@ -81,6 +84,27 @@ impl World {
         team1.replace_player(player1_id, player2_id);
         let team2 = self.team_mut(team_id_2);
         team2.replace_player(player2_id, player1_id);
+    }
+
+    pub fn swap_inhabit(&mut self, active_id: Uuid, hall_id: Uuid) {
+        let team_id = self.player(active_id).team.unwrap();
+        let active = self.player_mut(active_id);
+        let hall = self.player_mut(hall_id);
+        hall.inhabiting = Some(active_id);
+        let team = self.team_mut(team_id);
+        team.replace_player(active_id, hall_id);
+    }
+
+    pub fn swap_back(&mut self, active_id: Uuid, hall_id: Uuid) {
+        let player_is_ghost = self.player(hall_id).inhabiting.is_some();
+        if player_is_ghost {
+            let team_id = self.player(active_id).team.unwrap();
+            let active = self.player_mut(active_id);
+            let hall = self.player_mut(hall_id);
+            hall.inhabiting = None;
+            let team = self.team_mut(team_id);
+            team.replace_player(hall_id, active_id);
+        }
     }
 
     pub fn gen_team(&mut self, rng: &mut Rng, name: String, emoji: String) -> Uuid {
@@ -133,6 +157,11 @@ impl World {
         self.insert_player(player);
         id
     }
+
+    pub fn random_hall_player(&self, rng: &mut Rng) -> Uuid {
+        let index = rng.index(self.hall.len());
+        self.hall[index]
+    }   
 
     pub fn clear_game(&mut self) {
         for (_, player) in self.players.iter_mut() {
@@ -254,6 +283,7 @@ pub struct Player {
     pub mods: Mods,
     pub legendary_item: Option<LegendaryItem>,
     pub team: Option<Uuid>, //ig
+    pub inhabiting: Option<Uuid>,
     
     pub feed: Events,
 
@@ -302,6 +332,7 @@ impl Player {
             mods: Mods::new(),
             legendary_item: None,
             team: None,
+            inhabiting: None,
 
             feed: Events::new(),
 

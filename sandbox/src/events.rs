@@ -136,6 +136,10 @@ pub enum Event {
     MildWalk,
     Repeating {
         batter: Uuid,
+    },
+    Inhabiting {
+        batter: Uuid,
+        inhabit: Uuid,
     }
 }
 
@@ -158,6 +162,13 @@ impl Event {
                         let runs_home = game.home_team.score - game.linescore_home[0];
                         game.linescore_home.push(runs_home);
                         game.linescore_home[0] += runs_home;
+                    }
+                }
+                let lineup_length = world.team(game.batting_team().id).lineup.len();
+                for i in 0..lineup_length {
+                    let batter = world.player(world.team(game.batting_team().id).lineup[i]);
+                    if batter.inhabiting.is_some() {
+                        world.swap_back(batter.inhabiting.unwrap(), batter.id);
                     }
                 }
                 game.inning = inning;
@@ -192,6 +203,7 @@ impl Event {
             Event::Strikeout | Event::CharmStrikeout => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.outs += 1;
+                game.remove_ghosts(world, true);
                 game.end_pa();
             }
             Event::Walk | Event::CharmWalk => {
@@ -200,6 +212,7 @@ impl Event {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.remove_ghosts(world, false);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -208,6 +221,8 @@ impl Event {
                 upgrade_spicy(game, world);
                 let no_runners_on = game.runners.empty();
                 game.runners.advance_all(4);
+                //"but what if a ghost is repeating" then so be it
+                game.remove_ghosts(world, true);
                 game.batting_team_mut().score += game.get_run_value();
                 game.base_sweep();
                 if no_runners_on {
@@ -222,6 +237,7 @@ impl Event {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 upgrade_spicy(game, world);
                 game.runners = runners_after.clone();
+                game.remove_ghosts(world, false);
                 game.base_sweep();
                 game.runners
                     .add(bases - 1, game.batting_team().batter.unwrap());
@@ -235,6 +251,7 @@ impl Event {
                 downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
+                game.remove_ghosts(world, true);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -246,6 +263,7 @@ impl Event {
                 downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
+                game.remove_ghosts(world, true);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -254,6 +272,7 @@ impl Event {
                 downgrade_spicy(game, world);
                 game.outs += 2;
                 game.runners = runners_after.clone();
+                game.remove_ghosts(world, true);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -263,6 +282,7 @@ impl Event {
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.remove_ghosts(world, false);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -272,6 +292,7 @@ impl Event {
                 base_to: _base_to,
             } => {
                 game.runners.advance(base_from);
+                game.remove_ghosts(world, false);
                 game.base_sweep();
             }
             Event::CaughtStealing {
@@ -282,7 +303,7 @@ impl Event {
                 game.outs += 1;
             },
             Event::Incineration { target, ref replacement } => {
-                println!("{} at {}, day {}, {} {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day, if game.top { "top" } else { "bot" }, game.inning);
+                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
                 println!("Incineration: {}", target);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 //CLONED UUIDS
@@ -492,6 +513,7 @@ impl Event {
                 world.player_mut(target).mods.add(effect.unwrap(), ModLifetime::Week);
                 game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.remove_ghosts(world, false);
                 game.base_sweep();
                 game.end_pa();
             },
@@ -525,11 +547,12 @@ impl Event {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.runners.walk_instincts(third);
                 game.runners.add(if third { 2 } else { 1 }, game.batting_team().batter.unwrap());
+                game.remove_ghosts(world, false);
                 game.base_sweep();
                 game.end_pa();
             },
             Event::BigPeanut { target } => {
-                println!("{} at {}, day {}, {} {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day, if game.top { "top" } else { "bot" }, game.inning);
+                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
                 println!("Shelled by big peanut: {}", target);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
@@ -537,19 +560,26 @@ impl Event {
             Event::MildPitch => {
                 game.balls += 1;
                 game.runners.advance_all(1);
+                game.remove_ghosts(world, false);
                 game.base_sweep();
             },
             Event::MildWalk => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.runners.advance_all(1);
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.remove_ghosts(world, false);
                 game.base_sweep();
                 game.end_pa();
-            }
+            },
             Event::Repeating { batter } => {
                 let bt = game.batting_team_mut();
                 bt.batter_index -= 1;
                 bt.batter = Some(batter);
+            },
+            Event::Inhabiting { batter, inhabit } => {
+                world.swap_inhabit(batter, inhabit);
+                let bt = game.batting_team_mut();
+                bt.batter = Some(inhabit);
             }
         }
     }
@@ -603,6 +633,7 @@ impl Event {
             Event::MildPitch => "mildPitch",
             Event::MildWalk => "mildWalk",
             Event::Repeating { .. } => "repeating",
+            Event::Inhabiting { .. } => "inhabiting",
         };
         String::from(ev)
     }

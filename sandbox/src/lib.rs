@@ -146,6 +146,17 @@ impl Game {
         self.strikes = 0;
     }
 
+    fn remove_ghosts(&mut self, world: &mut World, include_batter: bool) {
+        if world.player(self.batting_team().batter.unwrap()).inhabiting.is_some() && include_batter {
+            world.swap_back(world.player(self.batting_team().batter.unwrap()).inhabiting.unwrap(), self.batting_team().batter.unwrap());
+        }
+        for runner in self.runners.iter() {
+            if world.player(runner.id).inhabiting.is_some() && runner.base >= self.runners.base_number - 1 {
+                world.swap_back(world.player(runner.id).inhabiting.unwrap(), runner.id);
+            }
+        }
+    }
+
     fn pick_fielder(&self, world: &World, roll: f64) -> Uuid {
         let pitching_team = world.team(self.pitching_team().id);
 

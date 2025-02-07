@@ -182,7 +182,7 @@ impl Plugin for BasePlugin {
 fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
     let pitcher = world.player(game.pitching_team().pitcher);
     let batter = world.player(game.batting_team().batter.unwrap());
-    let ruleset = world.season_ruleset;
+    let ruleset = world.season_ruleset; //todo: can we fold this into multiplier_data?
 
     let is_flinching = game.strikes == 0 && batter.mods.has(Mod::Flinch);
 
@@ -357,6 +357,9 @@ impl Plugin for BatterStatePlugin {
             let batter = team.lineup[idx % team.lineup.len()].clone();
             if world.player(batter).mods.has(Mod::Shelled) {
                 return Some(Event::Shelled { batter });
+            } else if world.player(batter).mods.has(Mod::Haunted) && rng.next() < 0.2 {
+                let inhabit = world.random_hall_player(rng);
+                return Some(Event::Inhabiting { batter, inhabit });
             }
             Some(Event::BatterUp { batter })
         } else {
