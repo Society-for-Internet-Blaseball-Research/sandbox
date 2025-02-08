@@ -140,6 +140,10 @@ pub enum Event {
     Inhabiting {
         batter: Uuid,
         inhabit: Uuid,
+    },
+    BlockedDrain {
+        drainer: Uuid,
+        target: Uuid,
     }
 }
 
@@ -556,7 +560,8 @@ impl Event {
             Event::Inhabiting { batter: _batter, inhabit } => {
                 let bt = game.batting_team_mut();
                 bt.batter = Some(inhabit);
-            }
+            },
+            Event::BlockedDrain { drainer: _drainer, target: _target } => {},
         }
     }
 
@@ -610,6 +615,7 @@ impl Event {
             Event::MildWalk => "mildWalk",
             Event::Repeating { .. } => "repeating",
             Event::Inhabiting { .. } => "inhabiting",
+            Event::BlockedDrain { .. } => "blockedDrain",
         };
         String::from(ev)
     }

@@ -684,14 +684,11 @@ impl Plugin for WeatherPlugin {
                 if rng.next() < drain_threshold { //rulesets
                     let fielding_team_drains = rng.next() < 0.5;
                     let is_atbat = rng.next() < 0.5;
+                    let mut drainer_opt: Option<Uuid> = None;
+                    let mut target_opt: Option<Uuid> = None;
                     if is_atbat {
-                        Some(Event::Blooddrain {
-                            drainer: if fielding_team_drains { game.pitching_team().pitcher } else { game.batting_team().batter.unwrap() },
-                            target: if fielding_team_drains { game.batting_team().batter.unwrap() } else { game.pitching_team().pitcher },
-                            stat: (rng.next() * 4.0).floor() as u8,
-                            siphon: false,
-                            siphon_effect: -1
-                        })
+                        drainer_opt = if fielding_team_drains { Some(game.pitching_team().pitcher) } else { Some(game.batting_team().batter.unwrap()) };
+                        target_opt = if fielding_team_drains { Some(game.batting_team().batter.unwrap()) } else { Some(game.pitching_team().pitcher) };
                     } else {
                         let fielder_roll = rng.next();
                         let fielder = game.pick_fielder(world, fielder_roll);
@@ -700,9 +697,17 @@ impl Plugin for WeatherPlugin {
                         } else {
                             game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batting_team().batter.unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
                         };
+                        drainer_opt = if fielding_team_drains { Some(fielder) } else { Some(hitter) };
+                        target_opt = if fielding_team_drains { Some(hitter) } else { Some(fielder) };
+                    }
+                    let drainer = drainer_opt.unwrap();
+                    let target = target_opt.unwrap();
+                    if world.team(world.player(target).team.unwrap()).mods.has(Mod::Sealant) {
+                        Some(Event::BlockedDrain { drainer, target })
+                    } else {
                         Some(Event::Blooddrain {
-                            drainer: if fielding_team_drains { fielder } else { hitter },
-                            target: if fielding_team_drains { hitter } else { fielder },
+                            drainer,
+                            target,
                             stat: (rng.next() * 4.0).floor() as u8,
                             siphon: false,
                             siphon_effect: -1

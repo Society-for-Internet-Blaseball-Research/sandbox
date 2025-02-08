@@ -32,7 +32,8 @@ pub enum Mod {
     Charm,
     SuperFlickering, //not bothering to type the actual mod name correctly
     Traveling,
-    Haunted
+    Haunted,
+    Sealant
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
