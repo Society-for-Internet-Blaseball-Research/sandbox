@@ -389,6 +389,8 @@ impl Player {
             self.mods.add(Mod::NightVision, ModLifetime::LegendaryItem);
         } else if let LegendaryItem::TheIffeyJr = item {
             self.mods.add(Mod::Minimized, ModLifetime::LegendaryItem);
+        } else if let LegendaryItem::ActualAirplane = item {
+            self.mods.add(Mod::Blaserunning, ModLifetime::LegendaryItem);
         }
         self.legendary_item = Some(item);
     }
@@ -408,7 +410,8 @@ pub enum LegendaryItem {
     Mushroom,
     NightVisionGoggles,
     ShrinkRay,
-    TheIffeyJr
+    TheIffeyJr,
+    ActualAirplane
 }
 
 #[derive(Clone, Debug)]

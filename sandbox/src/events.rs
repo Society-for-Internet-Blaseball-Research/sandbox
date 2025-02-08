@@ -275,10 +275,13 @@ impl Event {
                 game.end_pa();
             }
             Event::BaseSteal {
-                runner: _runner,
+                runner,
                 base_from,
                 base_to: _base_to,
             } => {
+                if world.player(runner).mods.has(Mod::Blaserunning) {
+                    game.batting_team_mut().score += 0.2;
+                }
                 game.runners.advance(base_from);
                 game.base_sweep();
             }

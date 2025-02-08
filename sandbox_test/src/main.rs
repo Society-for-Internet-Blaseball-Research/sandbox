@@ -305,10 +305,6 @@ fn main() {
     
     //todo: id by name function
     /*let mut game = generate_game(divisions[0], divisions[15], 0, sim.rng, sim.world); 
-    let ghost = sim.world.gen_player(sim.rng, Uuid::new_v4());
-    sim.world.player_mut(ghost).team = None;
-    sim.world.hall.push(ghost);
-    sim.world.player_mut(sim.world.team_name(String::from("Charleston Shoe Thieves")).lineup[5]).mods.add(Mod::Haunted, ModLifetime::Permanent);
     loop {
         let evt = sim.next(&game);
         evt.apply(&mut game, sim.world);

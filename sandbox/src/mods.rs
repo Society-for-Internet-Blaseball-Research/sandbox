@@ -33,7 +33,8 @@ pub enum Mod {
     SuperFlickering, //not bothering to type the actual mod name correctly
     Traveling,
     Haunted,
-    Sealant
+    Sealant,
+    Blaserunning
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

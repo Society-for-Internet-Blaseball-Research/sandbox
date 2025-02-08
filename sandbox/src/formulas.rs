@@ -375,7 +375,7 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>) -> f64 {
                     }
                 }
             },
-            LegendaryItem::NightVisionGoggles => {
+            LegendaryItem::NightVisionGoggles | LegendaryItem::ActualAirplane => {
                 return 0.0;
             },
             LegendaryItem::ShrinkRay => {
