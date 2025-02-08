@@ -120,9 +120,13 @@ impl World {
     }
 
     pub fn gen_player(&mut self, rng: &mut Rng, team: Uuid) -> Uuid {
+        let interview_rolls = 6 + 2; //soul, allergy, fate, ritual, blood, coffee + names
         let mut player = Player::new(rng);
         let id = player.id;
         player.name = format!("Player {}", &(player.id).to_string()[..8]);
+        for _ in 0..interview_rolls {
+            rng.next(); //to make the rng align
+        }
         player.team = Some(team.clone());
         self.insert_player(player);
         id
@@ -261,7 +265,6 @@ pub struct Player {
     pub mods: Mods,
     pub legendary_item: Option<LegendaryItem>,
     pub team: Option<Uuid>, //ig
-    //pub inhabiting: Option<Uuid>,
     
     pub feed: Events,
 
@@ -313,31 +316,31 @@ impl Player {
 
             feed: Events::new(),
 
-            // this is not rng order compatible
-            buoyancy: rng.next(),
-            divinity: rng.next(),
-            martyrdom: rng.next(),
+            // NOW it's rng order compatible
+            thwackability: rng.next(),
             moxie: rng.next(),
+            divinity: rng.next(),
             musclitude: rng.next(),
             patheticism: rng.next(),
-            thwackability: rng.next(),
+            buoyancy: rng.next(),
+            base_thirst: rng.next(),
+            laserlikeness: rng.next(),
+            ground_friction: rng.next(),
+            continuation: rng.next(),
+            indulgence: rng.next(),
+            martyrdom: rng.next(),
             tragicness: rng.next(),
-            coldness: rng.next(),
-            overpowerment: rng.next(),
-            ruthlessness: rng.next(),
             shakespearianism: rng.next(),
             suppression: rng.next(),
             unthwackability: rng.next(),
-            base_thirst: rng.next(),
-            continuation: rng.next(),
-            ground_friction: rng.next(),
-            indulgence: rng.next(),
-            laserlikeness: rng.next(),
-            anticapitalism: rng.next(),
-            chasiness: rng.next(),
+            coldness: rng.next(),
+            overpowerment: rng.next(),
+            ruthlessness: rng.next(),
             omniscience: rng.next(),
             tenaciousness: rng.next(),
             watchfulness: rng.next(),
+            anticapitalism: rng.next(),
+            chasiness: rng.next(),
             pressurization: rng.next(),
             cinnamon: rng.next(),
         }
