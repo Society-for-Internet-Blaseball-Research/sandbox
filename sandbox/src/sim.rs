@@ -457,6 +457,8 @@ fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, only_current: bool) -> V
 struct WeatherPlugin;
 impl Plugin for WeatherPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        let fort = 0.0;
+        let ruleset = world.season_ruleset;
         match game.weather {
             Weather::Sun => None,
             Weather::Eclipse => {
@@ -493,7 +495,7 @@ impl Plugin for WeatherPlugin {
                         replacement,
                         chain
                     })
-                } else if incin_roll < 0.00045 { //rulesets
+                } else if incin_roll < 0.00045 - 0.0004 * fort { //rulesets
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
@@ -526,7 +528,7 @@ impl Plugin for WeatherPlugin {
                     Some(Event::BigPeanut {
                         target
                     })
-                } else if rng.next() < 0.0006 {
+                } else if rng.next() < 0.0006 - 0.00055 * fort {
                     //idk if runners can have a reaction
                     //but this is assuming it's the same as incins
                     let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
@@ -586,7 +588,7 @@ impl Plugin for WeatherPlugin {
 
                     target1_opt = Some(pitcher);
                     target2_opt = Some(target2_raw);
-                } else if feedback_roll < 0.0001 {
+                } else if feedback_roll < 0.0001 - 0.0001 * fort {
                     if is_batter {
                         let target2_raw = game.pick_fielder(world, rng.next());
                         
@@ -630,7 +632,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Reverb => {
                 //estimate
-                if rng.next() < 0.00003 { //rulesets
+                if rng.next() < 0.00003 {
                     let reverb_type_roll = rng.next();
                     let reverb_type = if reverb_type_roll < 0.09 {
                         0u8
@@ -674,7 +676,12 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Blooddrain => {
-                if rng.next() < 0.00065 { //rulesets
+                let drain_threshold = if ruleset < 16 { 
+                    0.00065 - 0.001 * fort 
+                } else {
+                    0.00125 - 0.00125 * fort
+                };
+                if rng.next() < drain_threshold { //rulesets
                     let fielding_team_drains = rng.next() < 0.5;
                     let is_atbat = rng.next() < 0.5;
                     if is_atbat {
@@ -706,18 +713,18 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Sun2 => {
-                if game.home_team.score - 10.0 >= -0.001 { //ugh
+                if game.home_team.score > 9.99 { //ugh
                     Some(Event::Sun2 { home_team: true })
-                } else if game.away_team.score - 10.0 >= -0.001 {
+                } else if game.away_team.score > 9.99 {
                     Some(Event::Sun2 { home_team: false })
                 } else {
                     None
                 }
             },
             Weather::BlackHole => {
-                if game.home_team.score - 10.0 >= -0.001 {
+                if game.home_team.score > 9.99 {
                     Some(Event::BlackHole { home_team: true })
-                } else if game.away_team.score - 10.0 >= -0.001 {
+                } else if game.away_team.score > 9.99 {
                     Some(Event::BlackHole { home_team: false })
                 } else {
                     None
@@ -725,7 +732,7 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Salmon => None,
             Weather::PolarityPlus | Weather::PolarityMinus => {
-                if rng.next() < 0.035 { //rulesets
+                if rng.next() < 0.035 - 0.025 * fort {
                     Some(Event::PolaritySwitch)
                 } else {
                     None
