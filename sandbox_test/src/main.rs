@@ -5,7 +5,7 @@ use sandbox::{
     rng::Rng,
     sim::Sim,
     mods::{Mod, ModLifetime},
-    Game,
+    Game, Weather
 };
 use uuid::Uuid;
 
@@ -15,10 +15,10 @@ mod postseason;
 fn main() {
     //edit seed
     //let mut rng = Rng::new(69, 420);
-    let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
+    //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
     //let mut rng = Rng::new(37, 396396396396);
-    //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
+    let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new(11); //0-indexed season number
     //let name_gen = NameGen::new();
@@ -55,7 +55,7 @@ fn main() {
         fate_pool.retain(|&j| j != fate_roll);
     }
     let mut sim = Sim::new(&mut world, &mut rng);
-    let days_in_season = 99;
+    /*let days_in_season = 99;
     let games = generate_games(generate_schedule(days_in_season, &divisions, sim.rng), sim.world, sim.rng);
     for day in 0..days_in_season {
         let mut games_active: Vec<Game> = Vec::new();
@@ -301,10 +301,15 @@ fn main() {
 
     println!("Internet Series: {} {}-{} {}", sim.world.team(playoff_seeds1[0]).name, sim.world.team(playoff_seeds1[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).name);
     
-    sim.world.clear_season();
+    sim.world.clear_season();*/
     
     //todo: id by name function
-    /*let mut game = generate_game(divisions[0], divisions[15], 0, sim.rng, sim.world); 
+    let mut game = generate_game(divisions[0], divisions[15], 0, Some(Weather::Birds), sim.world, sim.rng); 
+    println!("{} at {}, {:?}",
+        sim.world.team(game.away_team.id).name,
+        sim.world.team(game.home_team.id).name,
+        game.weather
+    );
     loop {
         let evt = sim.next(&game);
         evt.apply(&mut game, sim.world);
@@ -351,7 +356,7 @@ fn main() {
             base,
             evt
         );
-    }*/
+    }
 
     // println!("Hello, world!");
 }

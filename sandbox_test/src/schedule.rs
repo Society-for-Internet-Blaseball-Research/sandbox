@@ -4,15 +4,15 @@ use sandbox::{
     events::Events,
     rng::Rng,
     mods::Mod,
-    Game, GameTeam,
+    Game, GameTeam, Weather
 };
 use uuid::Uuid;
 
 //unfortunately rng and world are not in standard order here
-pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, world: &World) -> Game {
+pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, weather_override: Option<Weather>, world: &World, rng: &mut Rng) -> Game {
     Game {
         id: Uuid::new_v4(),
-        weather: sandbox::Weather::generate(rng),
+        weather: if weather_override.is_some() { weather_override.unwrap() } else { Weather::generate(rng) },
         day,
         top: true,
         inning: 1,
@@ -219,7 +219,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
 }
 
 pub fn generate_games(schedule: Vec<ScheduleGame>, world: &World, rng: &mut Rng) -> Vec<Game> {
-    schedule.iter().map(|sg| generate_game(sg.home_team, sg.away_team, sg.day, rng, world)).collect()
+    schedule.iter().map(|sg| generate_game(sg.home_team, sg.away_team, sg.day, None, world, rng)).collect()
 }
 
 #[derive(Debug, Clone)]

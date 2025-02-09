@@ -71,17 +71,19 @@ pub fn generate_wildcard(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid>,
             playoff_seeds1[if higher_seed_hosts { 3 } else { 4 }],
             playoff_seeds1[if higher_seed_hosts { 4 } else { 3 }],
             99 + round as usize,
-                rng,
-                world
-            ));
-        }
+            None,
+            world,
+            rng
+        ));
+    }
     if wins_2_4 < 2 && wins_2_5 < 2 || wins_2_4 == wins_2_5 {
         games_active.push(generate_game(
             playoff_seeds2[if higher_seed_hosts { 3 } else { 4 }],
             playoff_seeds2[if higher_seed_hosts { 4 } else { 3 }],
             99 + round as usize,
-            rng,
-            world
+            None,
+            world,
+            rng
         ));
     }
     games_active
@@ -103,8 +105,9 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
             playoff_seeds1[if higher_seed_hosts { 0 } else { 3 }],
             playoff_seeds1[if higher_seed_hosts { 3 } else { 0 }],
             102 + round as usize,
-            rng,
-            world
+            None,
+            world,
+            rng
         ));
     }
     if wins_1[1] < 3 && wins_1[2] < 3 || wins_1[1] == wins_1[2] {
@@ -112,8 +115,9 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
             playoff_seeds1[if higher_seed_hosts { 1 } else { 2 }],
             playoff_seeds1[if higher_seed_hosts { 2 } else { 1 }],
             102 + round as usize,
-            rng,
-            world
+            None,
+            world,
+            rng
         ));
     }
     if wins_2[0] < 3 && wins_2[3] < 3 || wins_2[0] == wins_2[3] {
@@ -121,8 +125,9 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
             playoff_seeds2[if higher_seed_hosts { 0 } else { 3 }],
             playoff_seeds2[if higher_seed_hosts { 3 } else { 0 }],
             102 + round as usize,
-            rng,
-            world
+            None,
+            world,
+            rng
         ));
     }
     if wins_2[1] < 3 && wins_2[2] < 3 || wins_2[1] == wins_2[2] {
@@ -130,8 +135,9 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
             playoff_seeds2[if higher_seed_hosts { 1 } else { 2 }],
             playoff_seeds2[if higher_seed_hosts { 2 } else { 1 }],
             102 + round as usize,
-            rng,
-            world
+            None,
+            world,
+            rng
         ));
     }
     games_active
@@ -149,8 +155,9 @@ pub fn generate_championship(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uu
             playoff_seeds1[if higher_seed_hosts { 0 } else { 1 }],
             playoff_seeds1[if higher_seed_hosts { 1 } else { 0 }],
             107 + round as usize,
-            rng,
-            world
+            None,
+            world,
+            rng
         ));
     }
     if wins_2_1 < 3 && wins_2_2 < 3 || wins_2_1 == wins_2_2 {
@@ -158,8 +165,9 @@ pub fn generate_championship(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uu
             playoff_seeds2[if higher_seed_hosts { 0 } else { 1 }],
             playoff_seeds2[if higher_seed_hosts { 1 } else { 0 }],
             107 + round as usize,
-            rng,
-            world
+            None,
+            world,
+            rng
         ));
     }
     games_active

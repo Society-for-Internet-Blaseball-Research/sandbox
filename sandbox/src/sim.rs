@@ -542,14 +542,15 @@ impl Plugin for WeatherPlugin {
             },
             Weather::Birds => {
                 //rough estimate
-                if rng.next() < 0.003 {
+                if rng.next() < 0.03 {
                     return Some(Event::Birds);
-                } //todo: figure out what order these events go in
+                } //todo: this is definitely not rng accurate
                 
                 let shelled_players = poll_for_mod(game, world, Mod::Shelled, false);
                 for player in shelled_players {
                     //estimate, not sure how accurate this is
-                    if rng.next() < 0.00015 {
+                    let shelled_roll = rng.next();
+                    if world.team(world.player(player).team.unwrap()).mods.has(Mod::BirdSeed) && shelled_roll < 0.001 || shelled_roll < 0.00015 { //estimate. lmao at bird seed
                         return Some(Event::PeckedFree { player });
                     }
                 }

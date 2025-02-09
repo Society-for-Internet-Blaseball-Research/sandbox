@@ -34,7 +34,8 @@ pub enum Mod {
     Traveling,
     Haunted,
     Sealant,
-    Blaserunning
+    Blaserunning,
+    BirdSeed
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
