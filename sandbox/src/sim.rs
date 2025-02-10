@@ -67,7 +67,7 @@ enum PitchOutcome {
 struct BasePlugin;
 impl Plugin for BasePlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
-        let max_balls = 4;
+        let max_balls = game.get_max_balls(world);
         let max_strikes = game.get_max_strikes(world);
         // let max_outs = 3;
 

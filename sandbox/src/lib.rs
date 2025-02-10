@@ -213,6 +213,7 @@ impl Game {
         1.0 * polarity_coeff * sun_point_one_coeff + sum_sun_coeff
     }
 
+    //todo: just pass in a mods vec
     pub fn get_max_strikes(&self, world: &World) -> i16 {
         let batter = world.player(self.batting_team().batter.unwrap());
         let team = world.team(self.batting_team().id);
@@ -220,6 +221,16 @@ impl Game {
             4
         } else {
             3
+        }
+    }
+
+    pub fn get_max_balls(&self, world: &World) -> i16 {
+        let batter = world.player(self.batting_team().batter.unwrap());
+        let team = world.team(self.batting_team().id);
+        if batter.mods.has(Mod::WalkInThePark) || team.mods.has(Mod::WalkInThePark) {
+            3
+        } else {
+            4
         }
     }
 

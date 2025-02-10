@@ -39,6 +39,7 @@ pub enum Mod {
     Superyummy,
     Overperforming,
     Underperforming,
+    WalkInThePark
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
