@@ -94,7 +94,11 @@ impl Plugin for BasePlugin {
             }
             PitchOutcome::StrikeLooking => {
                 if last_strike {
-                    Event::Strikeout
+                    if world.player(game.batting_team().batter.unwrap()).mods.has(Mod::ONo) && game.balls == 0 {
+                        Event::Foul
+                    } else {
+                        Event::Strikeout
+                    }
                 } else {
                     Event::Strike
                 }
