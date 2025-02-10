@@ -466,7 +466,9 @@ impl Plugin for WeatherPlugin {
                 //todo: add fortification
                 let incin_roll = rng.next();
                 let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
-                if world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002 { //estimate
+                let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002; //estimate
+                let regular_check = incin_roll < 0.00045 - 0.0004 * fort;
+                if unstable_check || regular_check { //estimate
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
@@ -478,46 +480,31 @@ impl Plugin for WeatherPlugin {
                             //at any point in the sim
                             todo!()
                         } else {
-                            //UUID COMPARISON
                             if world.player(target).team.unwrap() == world.player(minimized[0]).team.unwrap() && world.player(minimized[0]).mods.has(Mod::Minimized) {
                                 return Some(Event::IffeyJr { target });
                             }
                         }
                     }
-                    let chain_target = game.pick_player_weighted(world, rng.next(), |uuid| if world.player(uuid).team.unwrap() == world.player(target).team.unwrap() {
-                        0.0
+                    if unstable_check {
+                        let chain_target = game.pick_player_weighted(world, rng.next(), |uuid| if world.player(uuid).team.unwrap() == world.player(target).team.unwrap() {
+                            0.0
+                        } else {
+                            1.0
+                        }, false);
+                        let replacement = Player::new(rng); 
+                        let chain = if world.player(chain_target).mods.has(Mod::Stable) { None } else { Some(chain_target) };//assumption
+                        Some(Event::IncinerationWithChain { 
+                            target,
+                            replacement,
+                            chain
+                        })
                     } else {
-                        1.0
-                    }, false);
-                    let replacement = Player::new(rng); 
-                    let chain = if world.player(chain_target).mods.has(Mod::Stable) { None } else { Some(chain_target) };//assumption
-                    Some(Event::IncinerationWithChain { 
-                        target,
-                        replacement,
-                        chain
-                    })
-                } else if incin_roll < 0.00045 - 0.0004 * fort { //rulesets
-                    if world.player(target).mods.has(Mod::Fireproof) {
-                        return Some(Event::Fireproof { target });
+                        let replacement = Player::new(rng);
+                        Some(Event::Incineration { 
+                            target,
+                            replacement
+                        })
                     }
-                    let minimized = poll_for_mod(game, world, Mod::Minimized, false);
-                    if minimized.len() > 0 {
-                        if minimized.len() > 1 { 
-                            //assuming that there's
-                            //no more than one legendary item of each kind
-                            //at any point in the sim
-                            todo!()
-                        } else {
-                            if world.player(target).team.unwrap() == world.player(minimized[0]).team.unwrap() && world.player(minimized[0]).mods.has(Mod::Minimized) {
-                                return Some(Event::IffeyJr { target });
-                            }
-                        }
-                    }
-                    let replacement = Player::new(rng);
-                    Some(Event::Incineration { 
-                        target,
-                        replacement
-                    })
                 } else {
                     None
                 }
@@ -563,44 +550,32 @@ impl Plugin for WeatherPlugin {
                 let batter = game.batting_team().batter.unwrap();
                 let pitcher = game.pitching_team().pitcher;
 
-                let mut target1_opt = None;
-                let mut target2_opt = None;
+                let mut target1_opt: Option<Uuid> = None;
+                let mut target2_opt: Option<Uuid> = None;
 
-                if is_batter && world.player(batter).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055 { //rulesets
-                    let target2_raw = game.pick_fielder(world, rng.next());
-                    
-                    target1_opt = Some(batter);
-                    target2_opt = Some(target2_raw);
-                } else if !is_batter && world.player(pitcher).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055 {
-                    let batting_team = world.team(game.batting_team().id);
-                    let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
-                    let target2_raw = batting_team.rotation[idx];
+                //the old implementation checked super flickering players first, then flickering, then regular. 
+                //the new one just checks the batter first.
+                //This might or might not be wrong
+                if is_batter {
+                    let feedback_check = world.player(batter).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055
+                        || world.player(batter).mods.has(Mod::Flickering) && feedback_roll < 0.02
+                        || feedback_roll < 0.0001 - 0.0001 * fort;
 
-                    target1_opt = Some(pitcher);
-                    target2_opt = Some(target2_raw);
-                } else if is_batter && world.player(batter).mods.has(Mod::Flickering) && feedback_roll < 0.02 {
-                    let target2_raw = game.pick_fielder(world, rng.next());
-                    
-                    target1_opt = Some(batter);
-                    target2_opt = Some(target2_raw);
-                } else if !is_batter && world.player(pitcher).mods.has(Mod::Flickering) && feedback_roll < 0.02 {
-                    let batting_team = world.team(game.batting_team().id);
-                    let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
-                    let target2_raw = batting_team.rotation[idx];
-
-                    target1_opt = Some(pitcher);
-                    target2_opt = Some(target2_raw);
-                } else if feedback_roll < 0.0001 - 0.0001 * fort {
-                    if is_batter {
+                    if feedback_check {
                         let target2_raw = game.pick_fielder(world, rng.next());
-                        
+                    
                         target1_opt = Some(batter);
                         target2_opt = Some(target2_raw);
-                    } else {
+                    }
+                } else {
+                    let feedback_check = world.player(pitcher).mods.has(Mod::SuperFlickering) && feedback_roll < 0.055
+                        || world.player(pitcher).mods.has(Mod::Flickering) && feedback_roll < 0.02
+                        || feedback_roll < 0.0001 - 0.0001 * fort;
+
+                    if feedback_check {   
                         let batting_team = world.team(game.batting_team().id);
                         let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
                         let target2_raw = batting_team.rotation[idx];
-                        
                         target1_opt = Some(pitcher);
                         target2_opt = Some(target2_raw);
                     }
@@ -686,11 +661,11 @@ impl Plugin for WeatherPlugin {
                 if rng.next() < drain_threshold { //rulesets
                     let fielding_team_drains = rng.next() < 0.5;
                     let is_atbat = rng.next() < 0.5;
-                    let mut drainer_opt: Option<Uuid> = None;
-                    let mut target_opt: Option<Uuid> = None;
+                    let mut drainer: Uuid;
+                    let mut target: Uuid;
                     if is_atbat {
-                        drainer_opt = if fielding_team_drains { Some(game.pitching_team().pitcher) } else { Some(game.batting_team().batter.unwrap()) };
-                        target_opt = if fielding_team_drains { Some(game.batting_team().batter.unwrap()) } else { Some(game.pitching_team().pitcher) };
+                        drainer = if fielding_team_drains { game.pitching_team().pitcher } else { game.batting_team().batter.unwrap() };
+                        target = if fielding_team_drains { game.batting_team().batter.unwrap() } else { game.pitching_team().pitcher };
                     } else {
                         let fielder_roll = rng.next();
                         let fielder = game.pick_fielder(world, fielder_roll);
@@ -699,11 +674,9 @@ impl Plugin for WeatherPlugin {
                         } else {
                             game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batting_team().batter.unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
                         };
-                        drainer_opt = if fielding_team_drains { Some(fielder) } else { Some(hitter) };
-                        target_opt = if fielding_team_drains { Some(hitter) } else { Some(fielder) };
+                        drainer = if fielding_team_drains { fielder } else { hitter };
+                        target = if fielding_team_drains { hitter } else { fielder };
                     }
-                    let drainer = drainer_opt.unwrap();
-                    let target = target_opt.unwrap();
                     if world.team(world.player(target).team.unwrap()).mods.has(Mod::Sealant) {
                         Some(Event::BlockedDrain { drainer, target })
                     } else {

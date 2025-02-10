@@ -351,15 +351,17 @@ impl Event {
                 println!("Reverb");
                 println!("Team: {}", world.team(team).name);
                 world.team_mut(team).apply_reverb_changes(reverb_type, changes);
-                if game.batting_team().id == team && reverb_type != 3 {
+                if reverb_type != 3 && game.batting_team().id == team {
                     let idx = game.batting_team().batter_index;
                     let world_team = world.team(team);
                     let new_batter = world_team.lineup[idx % world_team.lineup.len()].clone();
                     game.batting_team_mut().batter = Some(new_batter);
-                } else if game.pitching_team().id == team && reverb_type != 2 {
-                    game.pitching_team_mut().pitcher = world.team(team).rotation[0].clone();
-                } else if game.batting_team().id == team && reverb_type != 2 {
-                    game.batting_team_mut().pitcher = world.team(team).rotation[0].clone();
+                } else if reverb_type != 2 {
+                    if game.pitching_team().id == team {
+                        game.pitching_team_mut().pitcher = world.team(team).rotation[game.day % world.team(team).rotation.len()].clone();
+                    } else {
+                        game.batting_team_mut().pitcher = world.team(team).rotation[game.day % world.team(team).rotation.len()].clone();
+                    }
                 }
             },
             Event::Blooddrain { drainer, target, stat, .. } => {
