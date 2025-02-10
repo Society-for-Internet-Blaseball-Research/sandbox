@@ -20,6 +20,7 @@ impl<'a> Sim<'a> {
             world,
             rng,
             plugins: vec![
+                Box::new(PregamePlugin),
                 Box::new(InningStatePlugin),
                 Box::new(ExtraWeatherPlugin),
                 Box::new(BatterStatePlugin),
@@ -337,7 +338,7 @@ impl Plugin for BatterStatePlugin {
         if game.batting_team().batter.is_none() {
             let idx = batting_team.batter_index;
             let team = world.team(batting_team.id);
-            let first_batter = if game.events.len() == 0 {
+            let first_batter = if !game.started {
                 true
             } else if idx == 0 && game.inning == 1 && game.events.last() == "inningSwitch" {
                 true
@@ -834,5 +835,33 @@ impl Plugin for ModPlugin {
             }
         }
         None
+    }
+}
+
+struct PregamePlugin;
+impl Plugin for PregamePlugin {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        if !game.started {
+            let mut overperforming = vec![];
+            let mut underperforming = vec![];
+            let superyummy = poll_for_mod(game, world, Mod::Superyummy, true);
+            if superyummy.len() > 0 {
+                if let Weather::Peanuts = game.weather {
+                    overperforming = [overperforming, superyummy].concat();
+                } else {
+                    underperforming = [underperforming, superyummy].concat();
+                }
+            }
+
+            //other performing code here
+            let activated = |event: &str| game.events.has(String::from(event), -1);
+            if !activated("performing") && (overperforming.len() > 0 || underperforming.len() > 0) {
+                Some(Event::Performing { overperforming, underperforming })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }

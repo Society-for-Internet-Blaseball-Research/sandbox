@@ -37,6 +37,7 @@ pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, weather_override: O
         scoring_plays_inning: 0,
         salmon_resets_inning: 0,
         events: Events::new(),
+        started: false,
         runners: Baserunners::new(if world.team(team_b).mods.has(Mod::FifthBase) { 5 } else { 4 }),
         linescore_home: vec![if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 }],
         linescore_away: vec![0.0],

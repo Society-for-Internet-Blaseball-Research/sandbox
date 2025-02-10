@@ -144,6 +144,10 @@ pub enum Event {
     BlockedDrain {
         drainer: Uuid,
         target: Uuid,
+    },
+    Performing {
+        overperforming: Vec<Uuid>,
+        underperforming: Vec<Uuid>,
     }
 }
 
@@ -155,6 +159,7 @@ impl Event {
             Event::BatterUp { batter } => {
                 let bt = game.batting_team_mut();
                 bt.batter = Some(batter);
+                if !game.started { game.started = true };
             }
             Event::InningSwitch { inning, top } => {
                 if let Weather::Salmon = game.weather {
@@ -491,6 +496,7 @@ impl Event {
             Event::Shelled { batter: _batter } => {
                 let bt = game.batting_team_mut();
                 bt.batter_index += 1;
+                if !game.started { game.started = true };
             },
             Event::HitByPitch { target, hbp_type } => {
                 let effect = match hbp_type {
@@ -563,8 +569,17 @@ impl Event {
             Event::Inhabiting { batter: _batter, inhabit } => {
                 let bt = game.batting_team_mut();
                 bt.batter = Some(inhabit);
+                if !game.started { game.started = true }
             },
             Event::BlockedDrain { drainer: _drainer, target: _target } => {},
+            Event::Performing { ref overperforming, ref underperforming } => {
+                for &player in overperforming {
+                    world.player_mut(player).mods.add(Mod::Overperforming, ModLifetime::Game);
+                }
+                for &player in underperforming {
+                    world.player_mut(player).mods.add(Mod::Underperforming, ModLifetime::Game);
+                }
+            }
         }
     }
 
@@ -619,6 +634,7 @@ impl Event {
             Event::Repeating { .. } => "repeating",
             Event::Inhabiting { .. } => "inhabiting",
             Event::BlockedDrain { .. } => "blockedDrain",
+            Event::Performing { .. } => "performing",
         };
         String::from(ev)
     }

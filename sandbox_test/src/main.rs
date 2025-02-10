@@ -14,11 +14,11 @@ mod postseason;
 
 fn main() {
     //edit seed
-    //let mut rng = Rng::new(69, 420);
+    let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
     //let mut rng = Rng::new(37, 396396396396);
-    let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
+    //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new(11); //0-indexed season number
     //let name_gen = NameGen::new();
@@ -45,7 +45,7 @@ fn main() {
     //world.team_name_mut(String::from("Hades Tigers")).mods.add(Mod::HomeFieldAdvantage, ModLifetime::Season);
     //world.player_mut(world.team_name(String::from("Miami Dale")).lineup[4]).mods.add(Mod::Electric, ModLifetime::Game);
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
-    //world.player_mut(world.team_name(String::from("Charleston Shoe Thieves")).rotation[0]).mods.add(Mod::Mild, ModLifetime::Permanent);
+    //world.player_mut(world.team_name(String::from("Charleston Shoe Thieves")).rotation[0]).mods.add(Mod::Superyummy, ModLifetime::Permanent);
     
     let mut fate_pool: Vec<usize> = (0..20).collect();
     for i in 0..20 {
@@ -313,6 +313,7 @@ fn main() {
             sim.world.team(game.home_team.id).name,
             game.weather
         );
+        println!("{:?}", sim.world.player(game.away_team.pitcher).mods);
         loop {
             let evt = sim.next(&game);
             evt.apply(&mut game, sim.world);

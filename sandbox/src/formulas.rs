@@ -298,7 +298,11 @@ fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData, batting_team
     //equivalent to the category of stat (even THAT suppression call)
     let team_mods = if batting_team { &data.batting_team_mods } else { &data.pitching_team_mods };
     let mut multiplier = 1.0;
-    if mods.has(Mod::Growth) {
+    if mods.has(Mod::Overperforming) {
+        multiplier += 0.2;
+    } else if mods.has(Mod::Underperforming) {
+        multiplier -= 0.2; 
+    } else if mods.has(Mod::Growth) {
         multiplier += 0.05f64.min(data.day as f64 / 99.0 * 0.05);
     } else if team_mods.has(Mod::Traveling) {
         let away = data.top && attr.is_batting() || !data.top && attr.is_pitching() ;

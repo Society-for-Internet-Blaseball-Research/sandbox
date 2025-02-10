@@ -35,7 +35,10 @@ pub enum Mod {
     Haunted,
     Sealant,
     Blaserunning,
-    BirdSeed
+    BirdSeed,
+    Superyummy,
+    Overperforming,
+    Underperforming,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
