@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, weather_override: Option<Weather>, world: &World, rng: &mut Rng) -> Game {
     Game {
         id: Uuid::new_v4(),
-        weather: if weather_override.is_some() { weather_override.unwrap() } else { Weather::generate(rng) },
+        weather: if weather_override.is_some() { weather_override.unwrap() } else { Weather::generate(rng, world.season_ruleset) },
         day,
         top: true,
         inning: 1,

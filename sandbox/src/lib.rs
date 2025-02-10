@@ -38,18 +38,23 @@ pub enum Weather {
 }
 
 impl Weather {
-    pub fn generate(rng: &mut Rng) -> Weather {
-        let roll = rng.next();
+    pub fn generate(rng: &mut Rng, _season_ruleset: u8) -> Weather {
+        //todo: actually implement this
+        /*let weights = match season_ruleset {
+            11 -> [],
+            12..24 -> todo!(),
+        };*/
+        let roll = rng.index(20);
         //todo: add season rulesets
-        if roll < 0.05 {
+        if roll < 1 {
             Weather::Eclipse
-        } else if roll < 0.1 {
+        } else if roll < 2 {
             Weather::Blooddrain
-        } else if roll < 0.4 {
+        } else if roll < 8 {
             Weather::Peanuts
-        } else if roll < 0.55 {
+        } else if roll < 11 {
             Weather::Birds
-        } else if roll < 0.7 {
+        } else if roll < 14 {
             Weather::Feedback
         } else {
             Weather::Reverb
