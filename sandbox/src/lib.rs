@@ -24,7 +24,7 @@ pub enum Weather {
     Blooddrain,
     Sun2,
     BlackHole,
-    //Coffee
+    Coffee,
     //Coffee 2
     //Coffee 3
     Salmon,
@@ -126,15 +126,6 @@ impl Game {
                 new_runners.add(runner.base, runner.id);
             } else {
                 scoring_play = true;
-                let run_value = self.get_run_value();
-                let batting_team = if self.top {
-                    &mut self.away_team
-                } else {
-                    &mut self.home_team
-                };
-                if self.outs < 3 {
-                    batting_team.score += run_value;
-                }
             }
         }
         if scoring_play {
@@ -143,6 +134,20 @@ impl Game {
         self.runners = new_runners;
     }
 
+    //note that this is only for runs scored on a regular event
+    fn score(&mut self, world: &World) {
+        if self.outs < 3 {
+            let mut runs_scored = 0.0;
+            for runner in self.runners.iter() {
+                if runner.base >= self.runners.base_number - 1 {
+                    runs_scored += self.get_run_value();
+                    runs_scored += world.player(runner.id).get_run_value();
+                }
+            }
+            //run multipliers and sun wackiness here
+            self.batting_team_mut().score += runs_scored;
+        }
+    }
     
     fn end_pa(&mut self) {
         let bt = self.batting_team_mut();

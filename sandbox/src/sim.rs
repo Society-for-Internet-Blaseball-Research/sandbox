@@ -714,6 +714,13 @@ impl Plugin for WeatherPlugin {
                     None
                 }
             },
+            Weather::Coffee => {
+                if rng.next() < 0.02 - 0.012 * fort {
+                    Some(Event::Beaned)
+                } else {
+                    None
+                }
+            },
             Weather::Salmon => None,
             Weather::PolarityPlus | Weather::PolarityMinus => {
                 if rng.next() < 0.035 - 0.025 * fort {

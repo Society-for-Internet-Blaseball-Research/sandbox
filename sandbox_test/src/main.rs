@@ -32,7 +32,7 @@ fn main() {
     //this is supposed to be editable so it's in human readable format
     //IMPORTANT: team names in teams.txt must be sorted alphabetically
     let divisions: Vec<Uuid> = 
-        vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings",
+        vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Mexico City Wild Wings", "San Francisco Lovers",
         "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Unlimited Tacos",
         "Dallas Steaks", "Hades Tigers", "New York Millennials", "Philly Pies", "Seattle Garages", 
         "Canada Moist Talkers", "Charleston Shoe Thieves", "Hawai'i Fridays", "Kansas City Breath Mints", "Yellowstone Magic"]
@@ -307,7 +307,7 @@ fn main() {
         sim.world.clear_season();
     } else {
         //todo: id by name function
-        let mut game = generate_game(divisions[0], divisions[16], 0, Some(Weather::Birds), sim.world, sim.rng); 
+        let mut game = generate_game(divisions[3], divisions[12], 0, Some(Weather::Coffee), sim.world, sim.rng); 
         println!("{} at {}, {:?}",
             sim.world.team(game.away_team.id).name,
             sim.world.team(game.home_team.id).name,

@@ -398,6 +398,15 @@ impl Player {
         self.mods.clear_legendary_item();
         self.legendary_item = None;
     }
+    pub fn get_run_value(&self) -> f64 {
+        if self.mods.has(Mod::Wired) {
+            0.5
+        } else if self.mods.has(Mod::Tired) {
+            -0.5
+        } else {
+            0.0
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

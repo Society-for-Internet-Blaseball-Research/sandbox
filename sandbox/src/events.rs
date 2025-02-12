@@ -148,7 +148,8 @@ pub enum Event {
     Performing {
         overperforming: Vec<Uuid>,
         underperforming: Vec<Uuid>,
-    }
+    },
+    Beaned
 }
 
 impl Event {
@@ -213,6 +214,7 @@ impl Event {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -220,8 +222,10 @@ impl Event {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 upgrade_spicy(game, world);
                 let no_runners_on = game.runners.empty();
-                game.runners.advance_all(4);
+                game.runners.advance_all(game.get_bases(world));
+                game.score(world);
                 game.batting_team_mut().score += game.get_run_value();
+                game.batting_team_mut().score += world.player(game.batting_team().batter.unwrap()).get_run_value();
                 game.base_sweep();
                 if no_runners_on {
                     game.scoring_plays_inning += 1;
@@ -232,12 +236,14 @@ impl Event {
                 bases,
                 ref runners_after,
             } => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                let batter = game.batting_team().batter.unwrap();
+                world.player_mut(batter).feed.add(repr.clone());
                 upgrade_spicy(game, world);
                 game.runners = runners_after.clone();
+                game.score(world);
                 game.base_sweep();
                 game.runners
-                    .add(bases - 1, game.batting_team().batter.unwrap());
+                    .add(bases - 1, batter);
                 game.end_pa();
             }
             Event::GroundOut {
@@ -248,6 +254,7 @@ impl Event {
                 downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -259,6 +266,7 @@ impl Event {
                 downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -267,6 +275,7 @@ impl Event {
                 downgrade_spicy(game, world);
                 game.outs += 2;
                 game.runners = runners_after.clone();
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -276,6 +285,7 @@ impl Event {
                 game.outs += 1;
                 game.runners = runners_after.clone();
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             }
@@ -510,6 +520,7 @@ impl Event {
                 world.player_mut(target).mods.add(effect.unwrap(), ModLifetime::Week);
                 game.runners.walk();
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             },
@@ -542,6 +553,7 @@ impl Event {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.runners.walk_instincts(third);
                 game.runners.add(if third { 2 } else { 1 }, game.batting_team().batter.unwrap());
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             },
@@ -554,12 +566,14 @@ impl Event {
             Event::MildPitch => {
                 game.balls += 1;
                 game.runners.advance_all(1);
+                game.score(world);
                 game.base_sweep();
             },
             Event::MildWalk => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
                 game.runners.advance_all(1);
                 game.runners.add(0, game.batting_team().batter.unwrap());
+                game.score(world);
                 game.base_sweep();
                 game.end_pa();
             },
@@ -580,6 +594,17 @@ impl Event {
                 }
                 for &player in underperforming {
                     world.player_mut(player).mods.add(Mod::Underperforming, ModLifetime::Game);
+                }
+            },
+            Event::Beaned => {
+                let batter = world.player_mut(game.batting_team().batter.unwrap());
+                if batter.mods.has(Mod::Wired) {
+                    batter.mods.remove(Mod::Wired);
+                    batter.mods.add(Mod::Tired, ModLifetime::Game);
+                } else if batter.mods.has(Mod::Tired) {
+                    batter.mods.remove(Mod::Tired);
+                } else {
+                    batter.mods.add(Mod::Wired, ModLifetime::Game);
                 }
             }
         }
@@ -637,6 +662,7 @@ impl Event {
             Event::Inhabiting { .. } => "inhabiting",
             Event::BlockedDrain { .. } => "blockedDrain",
             Event::Performing { .. } => "performing",
+            Event::Beaned => "beaned",
         };
         String::from(ev)
     }

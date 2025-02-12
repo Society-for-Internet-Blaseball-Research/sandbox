@@ -40,7 +40,9 @@ pub enum Mod {
     Overperforming,
     Underperforming,
     WalkInThePark,
-    ONo
+    ONo,
+    Wired,
+    Tired
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
