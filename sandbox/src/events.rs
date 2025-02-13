@@ -149,7 +149,8 @@ pub enum Event {
         overperforming: Vec<Uuid>,
         underperforming: Vec<Uuid>,
     },
-    Beaned
+    Beaned,
+    PouredOver
 }
 
 impl Event {
@@ -606,6 +607,9 @@ impl Event {
                 } else {
                     batter.mods.add(Mod::Wired, ModLifetime::Game);
                 }
+            },
+            Event::PouredOver => {
+                world.player_mut(game.batting_team().batter.unwrap()).mods.add(Mod::FreeRefill, ModLifetime::Game);
             }
         }
     }
@@ -663,6 +667,7 @@ impl Event {
             Event::BlockedDrain { .. } => "blockedDrain",
             Event::Performing { .. } => "performing",
             Event::Beaned => "beaned",
+            Event::PouredOver => "pouredOver",
         };
         String::from(ev)
     }

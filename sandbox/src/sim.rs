@@ -721,6 +721,13 @@ impl Plugin for WeatherPlugin {
                     None
                 }
             },
+            Weather::Coffee2 => {
+                if rng.next() < 0.01875 - 0.0075 * fort && !world.player(game.batting_team().batter.unwrap()).mods.has(Mod::FreeRefill) {
+                    Some(Event::PouredOver)
+                } else {
+                    None
+                }
+            },
             Weather::Salmon => None,
             Weather::PolarityPlus | Weather::PolarityMinus => {
                 if rng.next() < 0.035 - 0.025 * fort {

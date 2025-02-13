@@ -42,7 +42,8 @@ pub enum Mod {
     WalkInThePark,
     ONo,
     Wired,
-    Tired
+    Tired,
+    FreeRefill
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

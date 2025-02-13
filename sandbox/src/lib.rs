@@ -25,7 +25,7 @@ pub enum Weather {
     Sun2,
     BlackHole,
     Coffee,
-    //Coffee 2
+    Coffee2,
     //Coffee 3
     Salmon,
     //Glitter
@@ -135,13 +135,19 @@ impl Game {
     }
 
     //note that this is only for runs scored on a regular event
-    fn score(&mut self, world: &World) {
+    fn score(&mut self, world: &mut World) {
         if self.outs < 3 {
             let mut runs_scored = 0.0;
             for runner in self.runners.iter() {
                 if runner.base >= self.runners.base_number - 1 {
                     runs_scored += self.get_run_value();
                     runs_scored += world.player(runner.id).get_run_value();
+                    if world.player(runner.id).mods.has(Mod::FreeRefill) {
+                        self.outs -= 1;
+                        self.outs = self.outs.max(0); //can players refill the in with 0 outs
+                                                      //or was that a bug?
+                        world.player_mut(runner.id).mods.remove(Mod::FreeRefill);
+                    }
                 }
             }
             //run multipliers and sun wackiness here

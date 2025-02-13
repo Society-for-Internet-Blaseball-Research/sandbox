@@ -14,10 +14,10 @@ mod postseason;
 
 fn main() {
     //edit seed
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    //let mut rng = Rng::new(37, 396396396396);
+    let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new(11); //0-indexed season number
@@ -32,9 +32,9 @@ fn main() {
     //this is supposed to be editable so it's in human readable format
     //IMPORTANT: team names in teams.txt must be sorted alphabetically
     let divisions: Vec<Uuid> = 
-        vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Mexico City Wild Wings", "San Francisco Lovers",
+        vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings",
         "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Unlimited Tacos",
-        "Dallas Steaks", "Hades Tigers", "New York Millennials", "Philly Pies", "Seattle Garages", 
+        "Dallas Steaks", "New York Millennials", "Philly Pies", "San Francisco Lovers", "Seattle Garages", 
         "Canada Moist Talkers", "Charleston Shoe Thieves", "Hawai'i Fridays", "Kansas City Breath Mints", "Yellowstone Magic"]
             .iter()
             .map(|s| teams[team_names.binary_search(s).expect("team not found")])
@@ -307,7 +307,7 @@ fn main() {
         sim.world.clear_season();
     } else {
         //todo: id by name function
-        let mut game = generate_game(divisions[3], divisions[12], 0, Some(Weather::Coffee), sim.world, sim.rng); 
+        let mut game = generate_game(divisions[7], divisions[6], 0, Some(Weather::Coffee2), sim.world, sim.rng); 
         println!("{} at {}, {:?}",
             sim.world.team(game.away_team.id).name,
             sim.world.team(game.home_team.id).name,
