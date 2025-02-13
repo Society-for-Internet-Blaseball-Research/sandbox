@@ -229,6 +229,12 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         let is_fly = rng.next() < formulas::fly_threshold(batter, pitcher, ruleset, multiplier_data);
         if is_fly {
             let mut advancing_runners = Vec::new();
+            if game.outs == 2 {
+                return PitchOutcome::Flyout {
+                    fielder: fly_defender_id,
+                    advancing_runners
+                };
+            }
             for baserunner in game.runners.iter() {
                 let base_from = baserunner.base;
                 let runner_id = baserunner.id.clone();
@@ -246,6 +252,12 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
 
         let ground_defender_id = game.pick_fielder(world, rng.next());
         let mut advancing_runners = Vec::new();
+        if game.outs == 2 {
+            return PitchOutcome::GroundOut {
+                fielder: ground_defender_id,
+                advancing_runners
+            };
+        }
 
         if !game.runners.empty() {
             let dp_roll = rng.next();
