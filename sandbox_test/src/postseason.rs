@@ -1,5 +1,4 @@
 use sandbox::{entities::World, rng::Rng, Game};
-use crate::schedule::generate_game;
 use uuid::Uuid;
 use std::cmp::Ordering;
 
@@ -67,7 +66,7 @@ pub fn generate_wildcard(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid>,
     let wins_2_4 = world.team(playoff_seeds2[3]).postseason_wins;
     let wins_2_5 = world.team(playoff_seeds2[4]).postseason_wins;
     if wins_1_4 < 2 && wins_1_5 < 2 || wins_1_4 == wins_1_5 {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds1[if higher_seed_hosts { 3 } else { 4 }],
             playoff_seeds1[if higher_seed_hosts { 4 } else { 3 }],
             99 + round as usize,
@@ -77,7 +76,7 @@ pub fn generate_wildcard(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid>,
         ));
     }
     if wins_2_4 < 2 && wins_2_5 < 2 || wins_2_4 == wins_2_5 {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds2[if higher_seed_hosts { 3 } else { 4 }],
             playoff_seeds2[if higher_seed_hosts { 4 } else { 3 }],
             99 + round as usize,
@@ -101,7 +100,7 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
         wins_2[j] = world.team(playoff_seeds2[j]).postseason_wins;
     }
     if wins_1[0] < 3 && wins_1[3] < 3 || wins_1[0] == wins_1[3] {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds1[if higher_seed_hosts { 0 } else { 3 }],
             playoff_seeds1[if higher_seed_hosts { 3 } else { 0 }],
             102 + round as usize,
@@ -111,7 +110,7 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
         ));
     }
     if wins_1[1] < 3 && wins_1[2] < 3 || wins_1[1] == wins_1[2] {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds1[if higher_seed_hosts { 1 } else { 2 }],
             playoff_seeds1[if higher_seed_hosts { 2 } else { 1 }],
             102 + round as usize,
@@ -121,7 +120,7 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
         ));
     }
     if wins_2[0] < 3 && wins_2[3] < 3 || wins_2[0] == wins_2[3] {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds2[if higher_seed_hosts { 0 } else { 3 }],
             playoff_seeds2[if higher_seed_hosts { 3 } else { 0 }],
             102 + round as usize,
@@ -131,7 +130,7 @@ pub fn generate_divisional(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uuid
         ));
     }
     if wins_2[1] < 3 && wins_2[2] < 3 || wins_2[1] == wins_2[2] {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds2[if higher_seed_hosts { 1 } else { 2 }],
             playoff_seeds2[if higher_seed_hosts { 2 } else { 1 }],
             102 + round as usize,
@@ -151,7 +150,7 @@ pub fn generate_championship(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uu
     let wins_2_1 = world.team(playoff_seeds2[0]).postseason_wins;
     let wins_2_2 = world.team(playoff_seeds2[1]).postseason_wins;
     if wins_1_1 < 3 && wins_1_2 < 3 || wins_1_1 == wins_1_2 {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds1[if higher_seed_hosts { 0 } else { 1 }],
             playoff_seeds1[if higher_seed_hosts { 1 } else { 0 }],
             107 + round as usize,
@@ -161,7 +160,7 @@ pub fn generate_championship(playoff_seeds1: &Vec<Uuid>, playoff_seeds2: &Vec<Uu
         ));
     }
     if wins_2_1 < 3 && wins_2_2 < 3 || wins_2_1 == wins_2_2 {
-        games_active.push(generate_game(
+        games_active.push(Game::new(
             playoff_seeds2[if higher_seed_hosts { 0 } else { 1 }],
             playoff_seeds2[if higher_seed_hosts { 1 } else { 0 }],
             107 + round as usize,

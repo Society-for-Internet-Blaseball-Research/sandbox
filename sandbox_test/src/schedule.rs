@@ -8,42 +8,6 @@ use sandbox::{
 };
 use uuid::Uuid;
 
-pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, weather_override: Option<Weather>, world: &World, rng: &mut Rng) -> Game {
-    Game {
-        id: Uuid::new_v4(),
-        weather: if weather_override.is_some() { weather_override.unwrap() } else { Weather::generate(rng, world.season_ruleset) },
-        day,
-        top: true,
-        inning: 1,
-        home_team: GameTeam {
-            id: team_a,
-            //todo: days
-            pitcher: world.team(team_a).rotation[day % world.team(team_a).rotation.len()],
-            batter: None,
-            batter_index: 0,
-            score: if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 },
-        },
-        away_team: GameTeam {
-            id: team_b,
-            pitcher: world.team(team_b).rotation[day % world.team(team_b).rotation.len()],
-            batter: None,
-            batter_index: 0,
-            score: 0.0,
-        },
-        balls: 0,
-        strikes: 0,
-        outs: 0,
-        polarity: false,
-        scoring_plays_inning: 0,
-        salmon_resets_inning: 0,
-        events: Events::new(),
-        started: false,
-        runners: Baserunners::new(if world.team(team_b).mods.has(Mod::FifthBase) { 5 } else { 4 }),
-        linescore_home: vec![if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 }],
-        linescore_away: vec![0.0],
-    }
-}
-
 pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> Vec<ScheduleGame> {
     let mut schedule: Vec<ScheduleGame> = Vec::new();
     let series_distr = vec![20, 130, 180]; //interleague, league, division, total
@@ -219,7 +183,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
 }
 
 pub fn generate_games(schedule: Vec<ScheduleGame>, world: &World, rng: &mut Rng) -> Vec<Game> {
-    schedule.iter().map(|sg| generate_game(sg.home_team, sg.away_team, sg.day, None, world, rng)).collect()
+    schedule.iter().map(|sg| Game::new(sg.home_team, sg.away_team, sg.day, None, world, rng)).collect()
 }
 
 #[derive(Debug, Clone)]

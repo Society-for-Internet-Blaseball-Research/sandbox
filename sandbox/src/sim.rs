@@ -78,7 +78,7 @@ impl Plugin for BasePlugin {
                 if (game.balls + 1) < max_balls {
                     Event::Ball
                 } else {
-                    if world.player(game.batting_team().batter.unwrap()).mods.has(Mod::BaseInstincts) && rng.next() < 0.2 {
+                    if world.player(game.batter().unwrap()).mods.has(Mod::BaseInstincts) && rng.next() < 0.2 {
                         Event::InstinctWalk { third: rng.next() * rng.next() < 0.5 }
                     } else {
                         Event::Walk
@@ -94,7 +94,7 @@ impl Plugin for BasePlugin {
             }
             PitchOutcome::StrikeLooking => {
                 if last_strike {
-                    if world.player(game.batting_team().batter.unwrap()).mods.has(Mod::ONo) && game.balls == 0 {
+                    if world.player(game.batter().unwrap()).mods.has(Mod::ONo) && game.balls == 0 {
                         Event::Foul
                     } else {
                         Event::Strikeout
@@ -185,8 +185,8 @@ impl Plugin for BasePlugin {
 }
 
 fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
-    let pitcher = world.player(game.pitching_team().pitcher);
-    let batter = world.player(game.batting_team().batter.unwrap());
+    let pitcher = world.player(game.pitcher());
+    let batter = world.player(game.batter().unwrap());
     let ruleset = world.season_ruleset; //todo: can we fold this into multiplier_data?
 
     let is_flinching = game.strikes == 0 && batter.mods.has(Mod::Flinch);
@@ -350,8 +350,8 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
 struct BatterStatePlugin;
 impl Plugin for BatterStatePlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
-        let batting_team = game.batting_team();
-        if game.batting_team().batter.is_none() {
+        let batting_team = game.scoreboard.batting_team();
+        if game.batter().is_none() {
             let idx = batting_team.batter_index;
             let team = world.team(batting_team.id);
             let first_batter = if !game.started {
@@ -392,18 +392,18 @@ impl Plugin for InningStatePlugin {
             return None;
         }
 
-        let lead = if (game.away_team.score - game.home_team.score).abs() < 0.01 {
+        let lead = if (game.scoreboard.away_team.score - game.scoreboard.home_team.score).abs() < 0.01 {
             0
-        } else if game.away_team.score > game.home_team.score {
+        } else if game.scoreboard.away_team.score > game.scoreboard.home_team.score {
             1
         } else {
             -1
         }; // lol floats
-        if game.inning >= 9 && (lead == -1 || !game.top && lead == 1) {
+        if game.inning >= 9 && (lead == -1 || !game.scoreboard.top && lead == 1) {
             return Some(Event::GameOver);
         }
 
-        if game.top {
+        if game.scoreboard.top {
             Some(Event::InningSwitch {
                 inning: game.inning,
                 top: false,
@@ -456,8 +456,8 @@ impl Plugin for StealingPlugin {
 }
 
 fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, only_current: bool) -> Vec<Uuid> {
-    let home_team = &game.home_team;
-    let away_team = &game.away_team;
+    let home_team = &game.scoreboard.home_team;
+    let away_team = &game.scoreboard.away_team;
 
     let home_lineup = world.team(home_team.id).lineup.clone();
     let home_pitcher = if only_current { vec![home_team.pitcher.clone()] } else { world.team(home_team.id).rotation.clone() };
@@ -563,8 +563,8 @@ impl Plugin for WeatherPlugin {
             Weather::Feedback => {
                 let is_batter = rng.next() < (9.0 / 14.0);
                 let feedback_roll = rng.next();
-                let batter = game.batting_team().batter.unwrap();
-                let pitcher = game.pitching_team().pitcher;
+                let batter = game.batter().unwrap();
+                let pitcher = game.pitcher();
 
                 let mut target1_opt: Option<Uuid> = None;
                 let mut target2_opt: Option<Uuid> = None;
@@ -589,7 +589,7 @@ impl Plugin for WeatherPlugin {
                         || feedback_roll < 0.0001 - 0.0001 * fort;
 
                     if feedback_check {   
-                        let batting_team = world.team(game.batting_team().id);
+                        let batting_team = world.team(game.scoreboard.batting_team().id);
                         let idx = (rng.next() * (batting_team.rotation.len() as f64)).floor() as usize;
                         let target2_raw = batting_team.rotation[idx];
                         target1_opt = Some(pitcher);
@@ -637,9 +637,9 @@ impl Plugin for WeatherPlugin {
                         3u8
                     };
                     let team_id = if rng.next() < 0.5 {
-                        game.home_team.id
+                        game.scoreboard.home_team.id
                     } else {
-                        game.away_team.id
+                        game.scoreboard.away_team.id
                     };
 
                     let mut gravity_players: Vec<usize> = vec![];
@@ -680,15 +680,15 @@ impl Plugin for WeatherPlugin {
                     let mut drainer: Uuid;
                     let mut target: Uuid;
                     if is_atbat {
-                        drainer = if fielding_team_drains { game.pitching_team().pitcher } else { game.batting_team().batter.unwrap() };
-                        target = if fielding_team_drains { game.batting_team().batter.unwrap() } else { game.pitching_team().pitcher };
+                        drainer = if fielding_team_drains { game.pitcher() } else { game.batter().unwrap() };
+                        target = if fielding_team_drains { game.batter().unwrap() } else { game.pitcher() };
                     } else {
                         let fielder_roll = rng.next();
                         let fielder = game.pick_fielder(world, fielder_roll);
                         let hitter = if game.runners.empty() {
-                            game.batting_team().batter.unwrap()
+                            game.batter().unwrap()
                         } else {
-                            game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batting_team().batter.unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
+                            game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batter().unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
                         };
                         drainer = if fielding_team_drains { fielder } else { hitter };
                         target = if fielding_team_drains { hitter } else { fielder };
@@ -709,18 +709,18 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Sun2 => {
-                if game.home_team.score > 9.99 { //ugh
+                if game.scoreboard.home_team.score > 9.99 { //ugh
                     Some(Event::Sun2 { home_team: true })
-                } else if game.away_team.score > 9.99 {
+                } else if game.scoreboard.away_team.score > 9.99 {
                     Some(Event::Sun2 { home_team: false })
                 } else {
                     None
                 }
             },
             Weather::BlackHole => {
-                if game.home_team.score > 9.99 {
+                if game.scoreboard.home_team.score > 9.99 {
                     Some(Event::BlackHole { home_team: true })
-                } else if game.away_team.score > 9.99 {
+                } else if game.scoreboard.away_team.score > 9.99 {
                     Some(Event::BlackHole { home_team: false })
                 } else {
                     None
@@ -734,7 +734,7 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Coffee2 => {
-                if rng.next() < 0.01875 - 0.0075 * fort && !world.player(game.batting_team().batter.unwrap()).mods.has(Mod::FreeRefill) {
+                if rng.next() < 0.01875 - 0.0075 * fort && !world.player(game.batter().unwrap()).mods.has(Mod::FreeRefill) {
                     Some(Event::PouredOver)
                 } else {
                     None
@@ -753,7 +753,7 @@ impl Plugin for WeatherPlugin {
             Weather::Night => {
                 if rng.next() < 0.01 { //estimate
                     let batter = rng.next() < 0.5;
-                    let shadows = if batter { &world.team(game.batting_team().id).shadows } else { &world.team(game.pitching_team().id).shadows };
+                    let shadows = if batter { &world.team(game.scoreboard.batting_team().id).shadows } else { &world.team(game.scoreboard.pitching_team().id).shadows };
                     let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
                     let replacement = shadows[replacement_idx as usize];
                     let boosts = roll_random_boosts(rng, 0.2);
@@ -779,16 +779,16 @@ impl Plugin for InningEventPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         let activated = |event: &str| game.events.has(String::from(event), 1);
         //note: inning events happen after the inning switch
-        if !activated("tripleThreatDeactivation") && game.inning == 4 && game.top {
-            let home_pitcher_deactivated = world.player(game.home_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
-            let away_pitcher_deactivated = world.player(game.away_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
+        if !activated("tripleThreatDeactivation") && game.inning == 4 && game.scoreboard.top {
+            let home_pitcher_deactivated = world.player(game.scoreboard.home_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
+            let away_pitcher_deactivated = world.player(game.scoreboard.away_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
             if home_pitcher_deactivated || away_pitcher_deactivated {
                 return Some(Event::TripleThreatDeactivation { home: home_pitcher_deactivated, away: away_pitcher_deactivated });
             }
         }
         if let Weather::Salmon = game.weather {
             let away_team_scored = game.linescore_away.last().unwrap().abs() > 0.01;
-            let home_team_scored = if !game.top { false } else { game.linescore_home.last().unwrap().abs() > 0.01 };
+            let home_team_scored = if !game.scoreboard.top { false } else { game.linescore_home.last().unwrap().abs() > 0.01 };
             if game.events.len() > 0 && game.events.last() == "inningSwitch" && (away_team_scored || home_team_scored) {
                 let salmon_activated = rng.next() < 0.1375;
                 if salmon_activated {
@@ -820,9 +820,9 @@ struct ModPlugin;
 impl Plugin for ModPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         //this whole function? rulesets
-        let batter = game.batting_team().batter.unwrap();
+        let batter = game.batter().unwrap();
         let batter_mods = &world.player(batter).mods;
-        let pitcher = game.pitching_team().pitcher;
+        let pitcher = game.pitcher();
         let pitcher_mods = &world.player(pitcher).mods;
         if batter_mods.has(Mod::Electric) && game.strikes > 0 && rng.next() < 0.2 {
             return Some(Event::Zap { batter: true });

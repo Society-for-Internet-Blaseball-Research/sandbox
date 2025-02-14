@@ -164,24 +164,24 @@ impl Event {
         game.events.add(repr.clone());
         match *self {
             Event::BatterUp { batter } => {
-                let bt = game.batting_team_mut();
+                let bt = game.scoreboard.batting_team_mut();
                 bt.batter = Some(batter);
                 if !game.started { game.started = true };
             }
             Event::InningSwitch { inning, top } => {
                 if let Weather::Salmon = game.weather {
-                    if game.top {
-                        let runs_away = game.away_team.score - game.linescore_away[0];
+                    if game.scoreboard.top {
+                        let runs_away = game.scoreboard.away_team.score - game.linescore_away[0];
                         game.linescore_away.push(runs_away);
                         game.linescore_away[0] += runs_away;
                     } else {
-                        let runs_home = game.home_team.score - game.linescore_home[0];
+                        let runs_home = game.scoreboard.home_team.score - game.linescore_home[0];
                         game.linescore_home.push(runs_home);
                         game.linescore_home[0] += runs_home;
                     }
                 }
                 game.inning = inning;
-                game.top = top;
+                game.scoreboard.top = top;
                 game.outs = 0;
                 game.balls = 0;
                 game.strikes = 0;
@@ -189,8 +189,8 @@ impl Event {
                 game.runners = Baserunners::new(game.get_bases(world));
             }
             Event::GameOver => {
-                let winning_team = if game.home_team.score > game.away_team.score { game.home_team.id } else { game.away_team.id };
-                let losing_team = if game.home_team.score > game.away_team.score { game.away_team.id } else { game.home_team.id };
+                let winning_team = if game.scoreboard.home_team.score > game.scoreboard.away_team.score { game.scoreboard.home_team.id } else { game.scoreboard.away_team.id };
+                let losing_team = if game.scoreboard.home_team.score > game.scoreboard.away_team.score { game.scoreboard.away_team.id } else { game.scoreboard.home_team.id };
                 if game.day < 99 {
                     world.team_mut(winning_team).wins += 1;
                     world.team_mut(losing_team).losses += 1;
@@ -210,12 +210,12 @@ impl Event {
                 game.strikes = game.strikes.min(game.get_max_strikes(world) - 1);
             }
             Event::Strikeout | Event::CharmStrikeout => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 let triple_threat_active = game.balls == 3
                     || game.runners.occupied(2)
                     || game.runners.len() == 3;
                 if triple_threat_active {
-                    game.batting_team_mut().score -= 0.3;
+                    game.scoreboard.batting_team_mut().score -= 0.3;
                 }
                 game.outs += 1;
                 game.end_pa();
@@ -223,21 +223,21 @@ impl Event {
             Event::Walk | Event::CharmWalk => {
                 // maybe we should put batter in the event
                 // todo: make a function that returns the current batter
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 game.runners.walk();
-                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.runners.add(0, game.batter().unwrap());
                 game.score(world);
                 game.base_sweep();
                 game.end_pa();
             }
             Event::HomeRun => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 upgrade_spicy(game, world);
                 let no_runners_on = game.runners.empty();
                 game.runners.advance_all(game.get_bases(world));
                 game.score(world);
-                game.batting_team_mut().score += game.get_run_value();
-                game.batting_team_mut().score += world.player(game.batting_team().batter.unwrap()).get_run_value();
+                game.scoreboard.batting_team_mut().score += game.get_run_value();
+                game.scoreboard.batting_team_mut().score += world.player(game.batter().unwrap()).get_run_value();
                 game.base_sweep();
                 if no_runners_on {
                     game.scoring_plays_inning += 1;
@@ -248,7 +248,7 @@ impl Event {
                 bases,
                 ref runners_after,
             } => {
-                let batter = game.batting_team().batter.unwrap();
+                let batter = game.batter().unwrap();
                 world.player_mut(batter).feed.add(repr.clone());
                 upgrade_spicy(game, world);
                 game.runners = runners_after.clone();
@@ -262,7 +262,7 @@ impl Event {
                 fielder: _fielder,
                 ref runners_after,
             } => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
@@ -274,7 +274,7 @@ impl Event {
                 fielder: _fielder,
                 ref runners_after,
             } => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
@@ -283,7 +283,7 @@ impl Event {
                 game.end_pa();
             }
             Event::DoublePlay { ref runners_after } => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 downgrade_spicy(game, world);
                 game.outs += 2;
                 game.runners = runners_after.clone();
@@ -292,11 +292,11 @@ impl Event {
                 game.end_pa();
             }
             Event::FieldersChoice { ref runners_after } => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 downgrade_spicy(game, world);
                 game.outs += 1;
                 game.runners = runners_after.clone();
-                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.runners.add(0, game.batter().unwrap());
                 game.score(world);
                 game.base_sweep();
                 game.end_pa();
@@ -307,7 +307,7 @@ impl Event {
                 base_to: _base_to,
             } => {
                 if world.player(runner).mods.has(Mod::Blaserunning) {
-                    game.batting_team_mut().score += 0.2;
+                    game.scoreboard.batting_team_mut().score += 0.2;
                 }
                 game.runners.advance(base_from);
                 game.base_sweep();
@@ -320,24 +320,24 @@ impl Event {
                 game.outs += 1;
             },
             Event::Incineration { target, ref replacement } => {
-                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Incineration: {}", target);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
-                if let Some(batter) = game.batting_team().batter {
+                if let Some(batter) = game.batter() {
                     if batter == target {
-                        game.batting_team_mut().batter = Some(replacement_id);
+                        game.assign_batter(replacement_id);
                     }
                 }
-                if target == game.pitching_team().pitcher {
-                    game.pitching_team_mut().pitcher = replacement_id;
-                } else if target == game.batting_team().pitcher {
-                    game.batting_team_mut().pitcher = replacement_id;
+                if target == game.pitcher() {
+                    game.assign_pitcher(replacement_id);
+                } else if target == game.scoreboard.batting_team().pitcher {
+                    game.scoreboard.batting_team_mut().pitcher = replacement_id;
                 }
                 world.replace_player(target, replacement_id);
             },
             Event::Peanut { target, yummy } => {
-                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Peanut: {}", target);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 let coeff = if yummy {
@@ -351,43 +351,40 @@ impl Event {
             },
             Event::Birds => {},
             Event::Feedback { target1, target2 } => {
-                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Feedback: {}, {}", target1, target2);
-                if let Some(batter) = game.batting_team().batter {
+                if let Some(batter) = game.batter() {
                     if batter == target1 {
-                        game.batting_team_mut().batter = Some(target2);
+                        game.assign_batter(target2);
                     } else {
-                        game.pitching_team_mut().pitcher = target2;
+                        game.assign_pitcher(target2);
                     }
                 }
-                if target1 == game.pitching_team().pitcher {
-                    game.pitching_team_mut().pitcher = target2;
-                }
-                if game.batting_team().pitcher == target2 {
-                    game.batting_team_mut().pitcher = target1;
+                if game.scoreboard.batting_team().pitcher == target2 {
+                    game.scoreboard.batting_team_mut().pitcher = target1;
                 }
                 world.swap(target1, target2);
             },
             Event::Reverb { reverb_type, team, ref changes } => {
-                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Reverb");
                 println!("Team: {}", world.team(team).name);
                 world.team_mut(team).apply_reverb_changes(reverb_type, changes);
-                if reverb_type != 3 && game.batting_team().id == team {
-                    let idx = game.batting_team().batter_index;
+                if reverb_type != 3 && game.scoreboard.batting_team().id == team {
+                    let idx = game.scoreboard.batting_team().batter_index;
                     let world_team = world.team(team);
                     let new_batter = world_team.lineup[idx % world_team.lineup.len()].clone();
-                    game.batting_team_mut().batter = Some(new_batter);
+                    game.assign_batter(new_batter);
                 } else if reverb_type != 2 {
-                    if game.pitching_team().id == team {
-                        game.pitching_team_mut().pitcher = world.team(team).rotation[game.day % world.team(team).rotation.len()].clone();
+                    if game.scoreboard.pitching_team().id == team {
+                        game.assign_pitcher(world.team(team).rotation[game.day % world.team(team).rotation.len()].clone());
                     } else {
-                        game.batting_team_mut().pitcher = world.team(team).rotation[game.day % world.team(team).rotation.len()].clone();
+                        game.scoreboard.batting_team_mut().pitcher = world.team(team).rotation[game.day % world.team(team).rotation.len()].clone();
                     }
                 }
             },
             Event::Blooddrain { drainer, target, stat, .. } => {
-                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Blooddrain: {}, {}", drainer, target);
                 println!("Drainer team: {}", world.team(world.player(drainer).team.unwrap()).name);
                 let drainer_mut = world.player_mut(drainer);
@@ -453,32 +450,32 @@ impl Event {
             //todo: add win manipulation when we actually have wins
             Event::Sun2 { home_team } => {
                 if home_team {
-                    game.home_team.score -= 10.0;
+                    game.scoreboard.home_team.score -= 10.0;
                 } else {
-                    game.away_team.score -= 10.0;
+                    game.scoreboard.away_team.score -= 10.0;
                 }
             }
             Event::BlackHole { home_team } => {
                 if home_team {
-                    game.home_team.score -= 10.0;
+                    game.scoreboard.home_team.score -= 10.0;
                 } else {
-                    game.away_team.score -= 10.0;
+                    game.scoreboard.away_team.score -= 10.0;
                 }
             },
             Event::Salmon { home_runs_lost, away_runs_lost } => {
-                if !game.events.has(String::from("salmon"), if game.top { 3 } else { 2 }) {
+                if !game.events.has(String::from("salmon"), if game.scoreboard.top { 3 } else { 2 }) {
                     game.salmon_resets_inning = 0;
                 }
                 if away_runs_lost {
                     //this whole exercise's goal is
                     //to find the first instance of the inning
-                    game.away_team.score -= game.linescore_away[game.linescore_away.len() - 1 - (game.salmon_resets_inning as usize)];
+                    game.scoreboard.away_team.score -= game.linescore_away[game.linescore_away.len() - 1 - (game.salmon_resets_inning as usize)];
                 }
                 if home_runs_lost {
-                    game.home_team.score -= game.linescore_home[game.linescore_home.len() - 1 - (game.salmon_resets_inning as usize)];
+                    game.scoreboard.home_team.score -= game.linescore_home[game.linescore_home.len() - 1 - (game.salmon_resets_inning as usize)];
                 }
-                if !game.top {
-                    game.top = true
+                if !game.scoreboard.top {
+                    game.scoreboard.top = true
                 } else {
                     game.inning -= 1;
                 }
@@ -489,22 +486,22 @@ impl Event {
             },
             Event::NightShift { batter, replacement, replacement_idx, ref boosts } => {
                 if batter {
-                    let team = game.batting_team();
+                    let team = game.scoreboard.batting_team();
                     let active_batter = team.batter.unwrap();
                     let active_batter_order = team.batter_index % world.team(team.id).lineup.len();
                     world.team_mut(team.id).lineup[active_batter_order] = replacement;
                     world.team_mut(team.id).shadows[replacement_idx] = active_batter;
                     world.player_mut(replacement).boost(boosts);
-                    let team_mut = game.batting_team_mut();
+                    let team_mut = game.scoreboard.batting_team_mut();
                     team_mut.batter = Some(replacement);
                 } else {
-                    let team = game.pitching_team();
+                    let team = game.scoreboard.pitching_team();
                     let active_pitcher = team.pitcher;
                     let active_pitcher_idx = 0; //todo: this only works for one game
                     world.team_mut(team.id).rotation[active_pitcher_idx] = replacement;
                     world.team_mut(team.id).shadows[replacement_idx] = active_pitcher;
                     world.player_mut(replacement).boost(boosts);
-                    let team_mut = game.pitching_team_mut();
+                    let team_mut = game.scoreboard.pitching_team_mut();
                     team_mut.pitcher = replacement;
                 }
             },
@@ -513,12 +510,12 @@ impl Event {
                 world.player_mut(tangled).boost(decreases);
             },
             Event::Reverberating { batter } => {
-                let bt = game.batting_team_mut();
+                let bt = game.scoreboard.batting_team_mut();
                 bt.batter_index -= 1;
                 bt.batter = Some(batter);
             }
             Event::Shelled { batter: _batter } => {
-                let bt = game.batting_team_mut();
+                let bt = game.scoreboard.batting_team_mut();
                 bt.batter_index += 1;
                 if !game.started { game.started = true };
             },
@@ -531,19 +528,19 @@ impl Event {
                 };
                 world.player_mut(target).mods.add(effect.unwrap(), ModLifetime::Week);
                 game.runners.walk();
-                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.runners.add(0, game.batter().unwrap());
                 game.score(world);
                 game.base_sweep();
                 game.end_pa();
             },
             Event::IncinerationWithChain { target, ref replacement, chain } => {
                 let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
-                if let Some(batter) = game.batting_team().batter {
+                if let Some(batter) = game.batter() {
                     if batter == target {
-                        game.batting_team_mut().batter = Some(replacement_id);
+                        game.scoreboard.batting_team_mut().batter = Some(replacement_id);
                     }
-                } else if target == game.pitching_team().pitcher {
-                    game.pitching_team_mut().pitcher = replacement_id;
+                } else if target == game.pitcher() {
+                    game.scoreboard.pitching_team_mut().pitcher = replacement_id;
                 }
                 world.replace_player(target, replacement_id);
                 if chain.is_some() {
@@ -562,15 +559,15 @@ impl Event {
                 }
             },
             Event::InstinctWalk { third } => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 game.runners.walk_instincts(third);
-                game.runners.add(if third { 2 } else { 1 }, game.batting_team().batter.unwrap());
+                game.runners.add(if third { 2 } else { 1 }, game.batter().unwrap());
                 game.score(world);
                 game.base_sweep();
                 game.end_pa();
             },
             Event::BigPeanut { target } => {
-                println!("{} at {}, day {}", world.team(game.away_team.id).name, world.team(game.home_team.id).name, game.day);
+                println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Shelled by big peanut: {}", target);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
@@ -582,20 +579,20 @@ impl Event {
                 game.base_sweep();
             },
             Event::MildWalk => {
-                world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
                 game.runners.advance_all(1);
-                game.runners.add(0, game.batting_team().batter.unwrap());
+                game.runners.add(0, game.batter().unwrap());
                 game.score(world);
                 game.base_sweep();
                 game.end_pa();
             },
             Event::Repeating { batter } => {
-                let bt = game.batting_team_mut();
+                let bt = game.scoreboard.batting_team_mut();
                 bt.batter_index -= 1;
                 bt.batter = Some(batter);
             },
             Event::Inhabiting { batter: _batter, inhabit } => {
-                let bt = game.batting_team_mut();
+                let bt = game.scoreboard.batting_team_mut();
                 bt.batter = Some(inhabit);
                 if !game.started { game.started = true }
             },
@@ -609,7 +606,7 @@ impl Event {
                 }
             },
             Event::Beaned => {
-                let batter = world.player_mut(game.batting_team().batter.unwrap());
+                let batter = world.player_mut(game.batter().unwrap());
                 if batter.mods.has(Mod::Wired) {
                     batter.mods.remove(Mod::Wired);
                     batter.mods.add(Mod::Tired, ModLifetime::Game);
@@ -620,15 +617,15 @@ impl Event {
                 }
             },
             Event::PouredOver => {
-                world.player_mut(game.batting_team().batter.unwrap()).mods.add(Mod::FreeRefill, ModLifetime::Game);
+                world.player_mut(game.batter().unwrap()).mods.add(Mod::FreeRefill, ModLifetime::Game);
             },
             Event::TripleThreat => {
-                world.player_mut(game.home_team.pitcher).mods.add(Mod::TripleThreat, ModLifetime::Permanent);
-                world.player_mut(game.away_team.pitcher).mods.add(Mod::TripleThreat, ModLifetime::Permanent);
+                world.player_mut(game.scoreboard.home_team.pitcher).mods.add(Mod::TripleThreat, ModLifetime::Permanent);
+                world.player_mut(game.scoreboard.away_team.pitcher).mods.add(Mod::TripleThreat, ModLifetime::Permanent);
             },
             Event::TripleThreatDeactivation { home, away } => {
-                if home { world.player_mut(game.home_team.pitcher).mods.remove(Mod::TripleThreat); }
-                if away { world.player_mut(game.away_team.pitcher).mods.remove(Mod::TripleThreat); }
+                if home { world.player_mut(game.scoreboard.home_team.pitcher).mods.remove(Mod::TripleThreat); }
+                if away { world.player_mut(game.scoreboard.away_team.pitcher).mods.remove(Mod::TripleThreat); }
             }
         }
     }
@@ -696,7 +693,7 @@ impl Event {
 
 
 fn upgrade_spicy(game: &mut Game, world: &mut World) {
-    let batter = world.player_mut(game.batting_team().batter.unwrap());
+    let batter = world.player_mut(game.batter().unwrap());
     if batter.mods.has(Mod::Spicy) && batter.feed.streak_multiple(vec![String::from("baseHit"), String::from("homeRun")], -1) == 1 {
         batter.mods.add(Mod::HeatingUp, ModLifetime::Permanent);
     } else if batter.mods.has(Mod::HeatingUp) {
@@ -706,7 +703,7 @@ fn upgrade_spicy(game: &mut Game, world: &mut World) {
 }
 
 fn downgrade_spicy(game: &mut Game, world: &mut World) {
-     let batter = world.player_mut(game.batting_team().batter.unwrap());
+     let batter = world.player_mut(game.batter().unwrap());
      if batter.mods.has(Mod::RedHot) {
          batter.mods.remove(Mod::RedHot);
      } else if batter.mods.has(Mod::HeatingUp) {

@@ -68,7 +68,6 @@ pub struct Game {
     pub weather: Weather,
     pub day: usize,
 
-    pub top: bool,
     pub inning: i16, // 1-indexed
     pub balls: i16,
     pub strikes: i16,
@@ -81,13 +80,19 @@ pub struct Game {
     pub events: Events,
     pub started: bool,
 
-    pub home_team: GameTeam,
-    pub away_team: GameTeam,
+    pub scoreboard: Scoreboard,
 
     pub runners: Baserunners,
 
     pub linescore_home: Vec<f64>, //for salmon purposes
     pub linescore_away: Vec<f64>, //the first element is the total score
+}
+
+#[derive(Clone, Debug)]
+pub struct Scoreboard {
+    pub home_team: GameTeam,
+    pub away_team: GameTeam,
+    pub top: bool
 }
 
 #[derive(Clone, Debug)]
@@ -117,6 +122,44 @@ pub struct MultiplierData {
 // can we extract as much &logic as possible out and do all the &mut logic separately?
 // like have `tick` not actually make any changes to the game state but instead apply that based on the EventData
 impl Game {
+    pub fn new(team_a: Uuid, team_b: Uuid, day: usize, weather_override: Option<Weather>, world: &World, rng: &mut Rng) -> Game {
+        Game {
+            id: Uuid::new_v4(),
+            weather: if weather_override.is_some() { weather_override.unwrap() } else { Weather::generate(rng, world.season_ruleset) },
+            day,
+            inning: 1,
+            balls: 0,
+            strikes: 0,
+            outs: 0,
+            polarity: false,
+            scoring_plays_inning: 0,
+            salmon_resets_inning: 0,
+            events: Events::new(),
+            started: false,
+            scoreboard: Scoreboard {
+                home_team: GameTeam {
+                    id: team_a,
+                    //todo: days
+                    pitcher: world.team(team_a).rotation[day % world.team(team_a).rotation.len()],
+                    batter: None,
+                    batter_index: 0,
+                    score: if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 },
+                },
+                away_team: GameTeam {
+                    id: team_b,
+                    pitcher: world.team(team_b).rotation[day % world.team(team_b).rotation.len()],
+                    batter: None,
+                    batter_index: 0,
+                    score: 0.0,
+                },
+                top: true,
+            },
+            runners: Baserunners::new(if world.team(team_b).mods.has(Mod::FifthBase) { 5 } else { 4 }),
+            linescore_home: vec![if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 }],
+            linescore_away: vec![0.0],
+        }
+    }
+
     fn base_sweep(&mut self) {
         let mut new_runners = Baserunners::new(self.runners.base_number);
         let mut scoring_play = false;
@@ -151,12 +194,12 @@ impl Game {
                 }
             }
             //run multipliers and sun wackiness here
-            self.batting_team_mut().score += runs_scored;
+            self.scoreboard.batting_team_mut().score += runs_scored;
         }
     }
     
     fn end_pa(&mut self) {
-        let bt = self.batting_team_mut();
+        let bt = self.scoreboard.batting_team_mut();
         bt.batter = None;
         bt.batter_index += 1;
         self.balls = 0;
@@ -164,7 +207,7 @@ impl Game {
     }
 
     fn pick_fielder(&self, world: &World, roll: f64) -> Uuid {
-        let pitching_team = world.team(self.pitching_team().id);
+        let pitching_team = world.team(self.scoreboard.pitching_team().id);
 
         let idx = (roll * (pitching_team.lineup.len() as f64)).floor() as usize;
         pitching_team.lineup[idx]
@@ -173,8 +216,8 @@ impl Game {
     //might turn this into a more general function later
     //in place of an official incin target algorithm this might do
     fn pick_player_weighted(&self, world: &World, roll: f64, weight: impl Fn(Uuid) -> f64, only_current: bool) -> Uuid {
-        let home_team = world.team(self.home_team.id);
-        let away_team = world.team(self.away_team.id);
+        let home_team = world.team(self.scoreboard.home_team.id);
+        let away_team = world.team(self.scoreboard.away_team.id);
 
         let mut eligible_players = Vec::new();
         for i in 0..home_team.lineup.len() {
@@ -184,8 +227,8 @@ impl Game {
             eligible_players.push(away_team.lineup[i]);
         }
         if only_current {
-            eligible_players.push(self.home_team.pitcher);
-            eligible_players.push(self.away_team.pitcher);
+            eligible_players.push(self.scoreboard.home_team.pitcher);
+            eligible_players.push(self.scoreboard.away_team.pitcher);
         } else {
             for i in 0..home_team.rotation.len() {
                 eligible_players.push(home_team.rotation[i]);
@@ -226,8 +269,8 @@ impl Game {
 
     //todo: just pass in a mods vec
     pub fn get_max_strikes(&self, world: &World) -> i16 {
-        let batter = world.player(self.batting_team().batter.unwrap());
-        let team = world.team(self.batting_team().id);
+        let batter = world.player(self.scoreboard.batting_team().batter.unwrap());
+        let team = world.team(self.scoreboard.batting_team().id);
         if batter.mods.has(Mod::FourthStrike) || team.mods.has(Mod::FourthStrike) {
             4
         } else {
@@ -236,8 +279,8 @@ impl Game {
     }
 
     pub fn get_max_balls(&self, world: &World) -> i16 {
-        let batter = world.player(self.batting_team().batter.unwrap());
-        let team = world.team(self.batting_team().id);
+        let batter = world.player(self.scoreboard.batting_team().batter.unwrap());
+        let team = world.team(self.scoreboard.batting_team().id);
         if batter.mods.has(Mod::WalkInThePark) || team.mods.has(Mod::WalkInThePark) {
             3
         } else {
@@ -246,30 +289,46 @@ impl Game {
     }
 
     pub fn get_bases(&self, world: &World) -> u8 {
-        if world.team(self.batting_team().id).mods.has(Mod::FifthBase) {
+        if world.team(self.scoreboard.batting_team().id).mods.has(Mod::FifthBase) {
             5
         } else {
             4
         }
     }
 
+    pub fn batter(&self) -> Option<Uuid> {
+        self.scoreboard.batting_team().batter
+    }
+
+    pub fn assign_batter(&mut self, new: Uuid) {
+        self.scoreboard.batting_team_mut().batter = Some(new);
+    }
+
+    pub fn pitcher(&self) -> Uuid {
+        self.scoreboard.pitching_team().pitcher
+    }
+
+    pub fn assign_pitcher(&mut self, new: Uuid) {
+        self.scoreboard.pitching_team_mut().pitcher = new;
+    }
+
     pub fn compute_multiplier_data(&self, world: &World) -> MultiplierData {
         MultiplierData {
             //someone who knows about lifetimes more than me can probably
             //make this code more efficient
-            batting_team_mods: world.team(self.batting_team().id).mods.clone(),
-            pitching_team_mods: world.team(self.pitching_team().id).mods.clone(), 
+            batting_team_mods: world.team(self.scoreboard.batting_team().id).mods.clone(),
+            pitching_team_mods: world.team(self.scoreboard.pitching_team().id).mods.clone(), 
             weather: self.weather.clone(),
             day: self.day,
             runners_empty: self.runners.empty(),
-            top: self.top,
+            top: self.scoreboard.top,
             maximum_blaseball: self.runners.iter().count() == 3, //todo: kid named fifth base
             at_bats: 0, //todo
         }
     }
+}
 
-    // todo: all of these are kind of nasty and will borrow all of self and that's usually annoying
-    // note: the alternative is even more annoying
+impl Scoreboard {
     pub fn pitching_team(&self) -> &GameTeam {
         if self.top {
             &self.home_team

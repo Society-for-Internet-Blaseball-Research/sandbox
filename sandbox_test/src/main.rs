@@ -1,4 +1,4 @@
-use crate::schedule::{generate_game, generate_games, generate_schedule};
+use crate::schedule::{generate_games, generate_schedule};
 use sandbox::{
     entities::{LegendaryItem, NameGen, World},
     events::Event,
@@ -14,10 +14,10 @@ mod postseason;
 
 fn main() {
     //edit seed
-    //let mut rng = Rng::new(69, 420);
+    let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
-    let mut rng = Rng::new(37, 396396396396);
+    //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
 
     let mut world = World::new(11); //0-indexed season number
@@ -65,12 +65,12 @@ fn main() {
                 games_active.push(games[i].clone());
             }
             for i in 0..10 {
-                let home_team = sim.world.team(games_active[i].home_team.id);
+                let home_team = sim.world.team(games_active[i].scoreboard.home_team.id);
                 let home_pitcher = home_team.rotation[day % home_team.rotation.len()];
-                games_active[i].home_team.pitcher = if sim.world.player(home_pitcher).mods.has(Mod::Shelled) { home_team.rotation[(day - 1) % home_team.rotation.len()] } else { home_pitcher };
-                let away_team = sim.world.team(games_active[i].away_team.id);
+                games_active[i].scoreboard.home_team.pitcher = if sim.world.player(home_pitcher).mods.has(Mod::Shelled) { home_team.rotation[(day - 1) % home_team.rotation.len()] } else { home_pitcher };
+                let away_team = sim.world.team(games_active[i].scoreboard.away_team.id);
                 let away_pitcher = away_team.rotation[day % away_team.rotation.len()];
-                games_active[i].away_team.pitcher = if sim.world.player(away_pitcher).mods.has(Mod::Shelled) { away_team.rotation[(day - 1) % away_team.rotation.len()] } else { away_pitcher };
+                games_active[i].scoreboard.away_team.pitcher = if sim.world.player(away_pitcher).mods.has(Mod::Shelled) { away_team.rotation[(day - 1) % away_team.rotation.len()] } else { away_pitcher };
             }
             let mut games_deactivated: Vec<Uuid> = vec![];
             loop {
@@ -84,10 +84,10 @@ fn main() {
                     if let Event::GameOver = evt {
                         /*println!(
                             "game over! {}: {}, {}: {}",
-                            sim.world.team(game.away_team.id).name,
-                            game.away_team.score,
-                            sim.world.team(game.home_team.id).name,
-                            game.home_team.score
+                            sim.world.team(game.scoreboard.away_team.id).name,
+                            game.scoreboard.away_team.score,
+                            sim.world.team(game.scoreboard.home_team.id).name,
+                            game.scoreboard.home_team.score
                         );*/
                         games_deactivated.push(game.id);
                     }
@@ -108,8 +108,8 @@ fn main() {
                         )
                     };
 
-                    let away_score = (game.away_team.score * 10.0).round() / 10.0;
-                    let home_score = (game.home_team.score * 10.0).round() / 10.0; //floats
+                    let away_score = (game.scoreboard.away_team.score * 10.0).round() / 10.0;
+                    let home_score = (game.scoreboard.home_team.score * 10.0).round() / 10.0; //floats
 
                     println!(
                         "{}{} {}@{} ({}b/{}s/{}o) {} {:?}",
@@ -271,6 +271,7 @@ fn main() {
             } else {
                 playoff_seeds2[0]
             };
+        //todo: be concise here
         let lower_seed = 
             if sim.world.team(playoff_seeds1[0]).wins > sim.world.team(playoff_seeds2[0]).wins 
             || sim.world.team(playoff_seeds1[0]).wins == sim.world.team(playoff_seeds2[0]).wins && sim.world.team(playoff_seeds1[0]).fate < sim.world.team(playoff_seeds2[0]).fate { 
@@ -284,7 +285,7 @@ fn main() {
             wins[1] = sim.world.team(lower_seed).postseason_wins;
             let higher_seed_hosts = i % 2 == 0;
             if wins[0] < 3 && wins[1] < 3 || wins[0] == wins[1] {
-                let mut game = generate_game(
+                let mut game = Game::new(
                     if higher_seed_hosts { higher_seed } else { lower_seed },
                     if higher_seed_hosts { lower_seed } else { higher_seed },
                     112 + i as usize,
@@ -307,13 +308,12 @@ fn main() {
         sim.world.clear_season();
     } else {
         //todo: id by name function
-        let mut game = generate_game(divisions[7], divisions[6], 0, Some(Weather::Coffee2), sim.world, sim.rng); 
+        let mut game = Game::new(divisions[8], divisions[19], 0, Some(Weather::Coffee3), sim.world, sim.rng); 
         println!("{} at {}, {:?}",
-            sim.world.team(game.away_team.id).name,
-            sim.world.team(game.home_team.id).name,
+            sim.world.team(game.scoreboard.away_team.id).name,
+            sim.world.team(game.scoreboard.home_team.id).name,
             game.weather
         );
-        println!("{:?}", sim.world.player(game.away_team.pitcher).mods);
         loop {
             let evt = sim.next(&game);
             evt.apply(&mut game, sim.world);
@@ -321,10 +321,10 @@ fn main() {
             if let Event::GameOver = evt {
                 println!(
                     "game over! {}: {}, {}: {}",
-                    sim.world.team(game.away_team.id).name,
-                    game.away_team.score,
-                    sim.world.team(game.home_team.id).name,
-                    game.home_team.score
+                    sim.world.team(game.scoreboard.away_team.id).name,
+                    game.scoreboard.away_team.score,
+                    sim.world.team(game.scoreboard.home_team.id).name,
+                    game.scoreboard.home_team.score
                 );
                 break;
             }
@@ -345,12 +345,12 @@ fn main() {
                 )
             };
 
-            let away_score = (game.away_team.score * 10.0).round() / 10.0;
-            let home_score = (game.home_team.score * 10.0).round() / 10.0; //floats
+            let away_score = (game.scoreboard.away_team.score * 10.0).round() / 10.0;
+            let home_score = (game.scoreboard.home_team.score * 10.0).round() / 10.0; //floats
 
             println!(
                 "{}{} {}@{} ({}b/{}s/{}o) {} {:?}",
-                if game.top { "t" } else { "b" },
+                if game.scoreboard.top { "t" } else { "b" },
                 game.inning,
                 away_score,
                 home_score,
