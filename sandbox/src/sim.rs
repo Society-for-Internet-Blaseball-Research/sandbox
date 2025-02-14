@@ -356,17 +356,17 @@ impl Plugin for BatterStatePlugin {
             let team = world.team(batting_team.id);
             let first_batter = if !game.started {
                 true
-            } else if idx == 0 && game.inning == 1 && game.events.last() == "inningSwitch" {
+            } else if idx == 0 && game.inning == 1 && game.events.last() == "InningSwitch" {
                 true
             } else {
                 false
             };
-            let inning_begin = !first_batter && game.events.last() == "inningSwitch";
+            let inning_begin = !first_batter && game.events.last() == "InningSwitch";
             let prev = if first_batter { team.lineup[0].clone() } else { team.lineup[(idx - 1) % team.lineup.len()].clone() };
             //todo: improve this
             if !first_batter && !inning_begin && world.player(prev).mods.has(Mod::Reverberating) && rng.next() < 0.2 { //rough estimate
                 return Some(Event::Reverberating { batter: prev });
-            } else if !first_batter && !inning_begin && world.player(prev).mods.has(Mod::Repeating) && (game.events.last() == "baseHit" || game.events.last() == "homeRun") {
+            } else if !first_batter && !inning_begin && world.player(prev).mods.has(Mod::Repeating) && (game.events.last() == "BaseHit" || game.events.last() == "HomeRun") {
                 if let Weather::Reverb = game.weather {
                     return Some(Event::Repeating { batter: prev });
                 }
@@ -775,7 +775,7 @@ impl Plugin for InningEventPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         let activated = |event: &str| game.events.has(String::from(event), 1);
         //note: inning events happen after the inning switch
-        if !activated("tripleThreatDeactivation") && game.inning == 4 && game.scoreboard.top {
+        if !activated("TripleThreatDeactivation") && game.inning == 4 && game.scoreboard.top {
             let home_pitcher_deactivated = world.player(game.scoreboard.home_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
             let away_pitcher_deactivated = world.player(game.scoreboard.away_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
             if home_pitcher_deactivated || away_pitcher_deactivated {
@@ -785,7 +785,7 @@ impl Plugin for InningEventPlugin {
         if let Weather::Salmon = game.weather {
             let away_team_scored = game.linescore_away.last().unwrap().abs() > 0.01;
             let home_team_scored = if !game.scoreboard.top { false } else { game.linescore_home.last().unwrap().abs() > 0.01 };
-            if game.events.len() > 0 && game.events.last() == "inningSwitch" && (away_team_scored || home_team_scored) {
+            if game.events.len() > 0 && game.events.last() == "InningSwitch" && (away_team_scored || home_team_scored) {
                 let salmon_activated = rng.next() < 0.1375;
                 if salmon_activated {
                     let runs_lost = rng.next() < 0.675; //rough estimate
@@ -853,7 +853,7 @@ impl Plugin for PregamePlugin {
         if !game.started {
             let activated = |event: &str| game.events.has(String::from(event), -1);
             if let Weather::Coffee3 = game.weather {
-                if !activated("tripleThreat") {
+                if !activated("TripleThreat") {
                     return Some(Event::TripleThreat);
                 }
             }
@@ -870,7 +870,7 @@ impl Plugin for PregamePlugin {
             }
 
             //other performing code here
-            if !activated("performing") && (overperforming.len() > 0 || underperforming.len() > 0) {
+            if !activated("Performing") && (overperforming.len() > 0 || underperforming.len() > 0) {
                 Some(Event::Performing { overperforming, underperforming })
             } else {
                 None

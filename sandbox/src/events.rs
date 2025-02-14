@@ -1,8 +1,10 @@
 use uuid::Uuid;
+use strum::Display;
+use std::string::ToString;
 
 use crate::{bases::Baserunners, entities::{Player, World}, mods::{Mod, ModLifetime}, Game, Weather};
 
-#[derive(Debug, Clone)]
+#[derive(Display, Debug, Clone)]
 pub enum Event {
     BatterUp {
         batter: Uuid
@@ -161,6 +163,9 @@ pub enum Event {
 impl Event {
     pub fn apply(&self, game: &mut Game, world: &mut World) {
         let repr = self.repr();
+        if let Event::BatterUp { .. } = self {
+            assert_eq!(repr, String::from("BatterUp"));
+        }
         game.events.add(repr.clone());
         match *self {
             Event::BatterUp { batter } => {
@@ -463,7 +468,7 @@ impl Event {
                 }
             },
             Event::Salmon { home_runs_lost, away_runs_lost } => {
-                if !game.events.has(String::from("salmon"), if game.scoreboard.top { 3 } else { 2 }) {
+                if !game.events.has(String::from("Salmon"), if game.scoreboard.top { 3 } else { 2 }) {
                     game.salmon_resets_inning = 0;
                 }
                 if away_runs_lost {
@@ -634,59 +639,7 @@ impl Event {
     //btw these don't need to be growable but static lifetimes
     //are annoying
     fn repr(&self) -> String {
-        let ev = match *self {
-            Event::BatterUp { .. } => "batterUp",
-            Event::InningSwitch { .. } => "inningSwitch",
-            Event::GameOver => "gameOver",
-            Event::Ball => "ball",
-            Event::Strike => "strike",
-            Event::Foul => "foul",
-            Event::Strikeout => "strikeOut",
-            Event::Walk => "walk",
-            Event::HomeRun => "homeRun",
-            Event::BaseHit { .. } => "baseHit",
-            Event::GroundOut { .. } => "groundOut",
-            Event::Flyout { .. } => "flyout",
-            Event::DoublePlay { .. } => "doublePlay",
-            Event::FieldersChoice { .. } => "fieldersChoice",
-            Event::BaseSteal { .. } => "baseSteal",
-            Event::CaughtStealing { .. } => "caughtStealing",
-            Event::Incineration { .. } => "incineration",
-            Event::Peanut { .. } => "peanut",
-            Event::Birds => "birds",
-            Event::Feedback { .. } => "feedback",
-            Event::Reverb { .. } => "reverb",
-            Event::Blooddrain { .. } => "blooddrain",
-            //todo: add win manipulation when we actually have wins
-            Event::Sun2 { .. } => "sun2",
-            Event::BlackHole { .. } => "blackHole",
-            Event::Salmon { .. } => "salmon",
-            Event::PolaritySwitch => "polaritySwitch",
-            Event::NightShift { .. } => "nightShift",
-            Event::Fireproof { .. } => "fireproof",
-            Event::Soundproof { .. } => "soundproof",
-            Event::Reverberating { .. } => "reverberating",
-            Event::Shelled { .. } => "shelled",
-            Event::HitByPitch { .. } => "hitByPitch",
-            Event::IncinerationWithChain { .. } => "incinerationWithChain",
-            Event::PeckedFree { .. } => "peckedFree",
-            Event::IffeyJr { .. } => "iffeyJr",
-            Event::Zap { .. } => "zap",
-            Event::InstinctWalk { .. } => "instinctWalk",
-            Event::BigPeanut { .. } => "bigPeanut",
-            Event::CharmWalk => "charmWalk",
-            Event::CharmStrikeout => "charmStrikeout",
-            Event::MildPitch => "mildPitch",
-            Event::MildWalk => "mildWalk",
-            Event::Repeating { .. } => "repeating",
-            Event::Inhabiting { .. } => "inhabiting",
-            Event::BlockedDrain { .. } => "blockedDrain",
-            Event::Performing { .. } => "performing",
-            Event::Beaned => "beaned",
-            Event::PouredOver => "pouredOver",
-            Event::TripleThreat => "tripleThreat",
-            Event::TripleThreatDeactivation { .. } => "tripleThreatDeactivation"
-        };
+        let ev = self.to_string();
         String::from(ev)
     }
 }
@@ -694,7 +647,7 @@ impl Event {
 
 fn upgrade_spicy(game: &mut Game, world: &mut World) {
     let batter = world.player_mut(game.batter().unwrap());
-    if batter.mods.has(Mod::Spicy) && batter.feed.streak_multiple(vec![String::from("baseHit"), String::from("homeRun")], -1) == 1 {
+    if batter.mods.has(Mod::Spicy) && batter.feed.streak_multiple(vec![String::from("BaseHit"), String::from("HomeRun")], -1) == 1 {
         batter.mods.add(Mod::HeatingUp, ModLifetime::Permanent);
     } else if batter.mods.has(Mod::HeatingUp) {
         batter.mods.remove(Mod::HeatingUp);
