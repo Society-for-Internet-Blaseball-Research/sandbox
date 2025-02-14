@@ -137,6 +137,10 @@ impl Baserunners {
         self.runners.len() == 0
     }
 
+    pub fn len(&self) -> usize {
+        self.runners.len()
+    }
+
     pub fn pick_runner(&self, roll: f64) -> u8 {
         //todo: maybe rewrite this to use an if
         let len = self.runners.len();

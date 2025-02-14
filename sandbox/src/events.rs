@@ -150,7 +150,12 @@ pub enum Event {
         underperforming: Vec<Uuid>,
     },
     Beaned,
-    PouredOver
+    PouredOver,
+    TripleThreat,
+    TripleThreatDeactivation {
+        home: bool,
+        away: bool,
+    }
 }
 
 impl Event {
@@ -206,6 +211,12 @@ impl Event {
             }
             Event::Strikeout | Event::CharmStrikeout => {
                 world.player_mut(game.batting_team().batter.unwrap()).feed.add(repr.clone());
+                let triple_threat_active = game.balls == 3
+                    || game.runners.occupied(2)
+                    || game.runners.len() == 3;
+                if triple_threat_active {
+                    game.batting_team_mut().score -= 0.3;
+                }
                 game.outs += 1;
                 game.end_pa();
             }
@@ -610,6 +621,14 @@ impl Event {
             },
             Event::PouredOver => {
                 world.player_mut(game.batting_team().batter.unwrap()).mods.add(Mod::FreeRefill, ModLifetime::Game);
+            },
+            Event::TripleThreat => {
+                world.player_mut(game.home_team.pitcher).mods.add(Mod::TripleThreat, ModLifetime::Permanent);
+                world.player_mut(game.away_team.pitcher).mods.add(Mod::TripleThreat, ModLifetime::Permanent);
+            },
+            Event::TripleThreatDeactivation { home, away } => {
+                if home { world.player_mut(game.home_team.pitcher).mods.remove(Mod::TripleThreat); }
+                if away { world.player_mut(game.away_team.pitcher).mods.remove(Mod::TripleThreat); }
             }
         }
     }
@@ -668,6 +687,8 @@ impl Event {
             Event::Performing { .. } => "performing",
             Event::Beaned => "beaned",
             Event::PouredOver => "pouredOver",
+            Event::TripleThreat => "tripleThreat",
+            Event::TripleThreatDeactivation { .. } => "tripleThreatDeactivation"
         };
         String::from(ev)
     }

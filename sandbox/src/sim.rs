@@ -22,7 +22,7 @@ impl<'a> Sim<'a> {
             plugins: vec![
                 Box::new(PregamePlugin),
                 Box::new(InningStatePlugin),
-                Box::new(ExtraWeatherPlugin),
+                Box::new(InningEventPlugin),
                 Box::new(BatterStatePlugin),
                 Box::new(WeatherPlugin),
                 Box::new(ModPlugin),
@@ -740,6 +740,7 @@ impl Plugin for WeatherPlugin {
                     None
                 }
             },
+            Weather::Coffee3 => None,
             Weather::Salmon => None,
             Weather::PolarityPlus | Weather::PolarityMinus => {
                 if rng.next() < 0.035 - 0.025 * fort {
@@ -773,9 +774,18 @@ fn roll_random_boosts(rng: &mut Rng, threshold: f64) -> Vec<f64> {
     boosts
 }
 
-struct ExtraWeatherPlugin;
-impl Plugin for ExtraWeatherPlugin {
-    fn tick(&self, game: &Game, _world: &World, rng: &mut Rng) -> Option<Event> {
+struct InningEventPlugin;
+impl Plugin for InningEventPlugin {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        let activated = |event: &str| game.events.has(String::from(event), 1);
+        //note: inning events happen after the inning switch
+        if !activated("tripleThreatDeactivation") && game.inning == 4 && game.top {
+            let home_pitcher_deactivated = world.player(game.home_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
+            let away_pitcher_deactivated = world.player(game.away_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
+            if home_pitcher_deactivated || away_pitcher_deactivated {
+                return Some(Event::TripleThreatDeactivation { home: home_pitcher_deactivated, away: away_pitcher_deactivated });
+            }
+        }
         if let Weather::Salmon = game.weather {
             let away_team_scored = game.linescore_away.last().unwrap().abs() > 0.01;
             let home_team_scored = if !game.top { false } else { game.linescore_home.last().unwrap().abs() > 0.01 };
@@ -845,8 +855,15 @@ struct PregamePlugin;
 impl Plugin for PregamePlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         if !game.started {
+            let activated = |event: &str| game.events.has(String::from(event), -1);
+            if let Weather::Coffee3 = game.weather {
+                if !activated("tripleThreat") {
+                    return Some(Event::TripleThreat);
+                }
+            }
             let mut overperforming = vec![];
             let mut underperforming = vec![];
+            //todo: make this a separate event
             let superyummy = poll_for_mod(game, world, Mod::Superyummy, true);
             if superyummy.len() > 0 {
                 if let Weather::Peanuts = game.weather {
@@ -857,7 +874,6 @@ impl Plugin for PregamePlugin {
             }
 
             //other performing code here
-            let activated = |event: &str| game.events.has(String::from(event), -1);
             if !activated("performing") && (overperforming.len() > 0 || underperforming.len() > 0) {
                 Some(Event::Performing { overperforming, underperforming })
             } else {

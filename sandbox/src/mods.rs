@@ -43,7 +43,8 @@ pub enum Mod {
     ONo,
     Wired,
     Tired,
-    FreeRefill
+    FreeRefill,
+    TripleThreat
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

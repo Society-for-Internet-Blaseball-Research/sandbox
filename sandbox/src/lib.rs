@@ -26,7 +26,7 @@ pub enum Weather {
     BlackHole,
     Coffee,
     Coffee2,
-    //Coffee 3
+    Coffee3,
     Salmon,
     //Glitter
     PolarityPlus,
