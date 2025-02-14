@@ -481,7 +481,7 @@ impl Plugin for WeatherPlugin {
             Weather::Eclipse => {
                 //todo: add fortification
                 let incin_roll = rng.next();
-                let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
+                let target = game.pick_player_weighted(world, rng.next(), |&uuid| !game.runners.contains(uuid), true);
                 let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002; //estimate
                 let regular_check = incin_roll < 0.00045 - 0.0004 * fort;
                 if unstable_check || regular_check { //estimate
@@ -502,11 +502,7 @@ impl Plugin for WeatherPlugin {
                         }
                     }
                     if unstable_check {
-                        let chain_target = game.pick_player_weighted(world, rng.next(), |uuid| if world.player(uuid).team.unwrap() == world.player(target).team.unwrap() {
-                            0.0
-                        } else {
-                            1.0
-                        }, false);
+                        let chain_target = game.pick_player_weighted(world, rng.next(), |&uuid| world.player(uuid).team.unwrap() != world.player(target).team.unwrap(), false);
                         let replacement = Player::new(rng); 
                         let chain = if world.player(chain_target).mods.has(Mod::Stable) { None } else { Some(chain_target) };//assumption
                         Some(Event::IncinerationWithChain { 
@@ -528,14 +524,14 @@ impl Plugin for WeatherPlugin {
             Weather::Peanuts => {
                 if rng.next() < 0.000002 { //estimate
                     //this is maybe not rng compliant
-                    let target = game.pick_player_weighted(world, rng.next(), |_uuid| 1.0, true); //theory
+                    let target = game.pick_player_weighted(world, rng.next(), |&_uuid| true, true); //theory
                     Some(Event::BigPeanut {
                         target
                     })
                 } else if rng.next() < 0.0006 - 0.00055 * fort {
                     //idk if runners can have a reaction
                     //but this is assuming it's the same as incins
-                    let target = game.pick_player_weighted(world, rng.next(), |uuid| if game.runners.contains(uuid) { 0.0 } else { 1.0 }, true);
+                    let target = game.pick_player_weighted(world, rng.next(), |&uuid| !game.runners.contains(uuid), true);
                     Some(Event::Peanut {
                         target,
                         yummy: false
@@ -688,7 +684,7 @@ impl Plugin for WeatherPlugin {
                         let hitter = if game.runners.empty() {
                             game.batter().unwrap()
                         } else {
-                            game.pick_player_weighted(world, rng.next(), |uuid| if uuid == game.batter().unwrap() || game.runners.contains(uuid) { 1.0 } else { 0.0 }, true)
+                            game.pick_player_weighted(world, rng.next(), |&uuid| uuid == game.batter().unwrap() || game.runners.contains(uuid), true)
                         };
                         drainer = if fielding_team_drains { fielder } else { hitter };
                         target = if fielding_team_drains { hitter } else { fielder };
