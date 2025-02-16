@@ -868,6 +868,17 @@ impl Plugin for PregamePlugin {
                     underperforming = [underperforming, superyummy].concat();
                 }
             }
+            
+            let perk = poll_for_mod(game, world, Mod::Perk, true);
+            if perk.len() > 0 {
+                if let Weather::Coffee = game.weather {
+                    overperforming = [overperforming, perk].concat();
+                } else if let Weather::Coffee2 = game.weather {
+                    overperforming = [overperforming, perk].concat();
+                } else if let Weather::Coffee3 = game.weather {
+                    overperforming = [overperforming, perk].concat();
+                }
+            }
 
             //other performing code here
             if !activated("Performing") && (overperforming.len() > 0 || underperforming.len() > 0) {

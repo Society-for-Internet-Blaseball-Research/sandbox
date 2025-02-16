@@ -44,7 +44,8 @@ pub enum Mod {
     Wired,
     Tired,
     FreeRefill,
-    TripleThreat
+    TripleThreat,
+    Perk
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
