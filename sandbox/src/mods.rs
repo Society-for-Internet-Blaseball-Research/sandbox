@@ -1,5 +1,8 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use strum::EnumString;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 // todo: repr u16 for compactness?
+#[strum(serialize_all="SCREAMING_SNAKE_CASE")]
 pub enum Mod {
     TargetedShame,
     Flinch,

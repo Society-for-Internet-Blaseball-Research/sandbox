@@ -4,6 +4,8 @@ use serde_json;
 use uuid::Uuid;
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
+use sandbox::{entities::{Player, Team, World}, mods::{Mods, Mod, ModLifetime}, events::Events};
 
 pub fn fill(season: u8) {
 
@@ -52,6 +54,7 @@ pub fn divisions(season: u8) -> Option<ChronArray<ChronDivision>> {
     if season == 11 {
         result.items.retain(|item| item.validTo.is_some());
     }
+
     return Some(result);
 }
 
@@ -140,6 +143,16 @@ pub struct ChronArray<D> {
     pub items: Vec<ChronItem<D>>
 }
 
+impl ChronArray<ChronDivision> {
+    pub fn convert(self) -> Vec<Uuid> {
+        let mut divs: Vec<ChronDivision> = self.items.iter().map(|item| item.data.clone()).collect();
+        divs.sort_by(|d1, d2| d1.name.cmp(&d2.name));
+        divs.iter()
+            .flat_map(|d| d.teams.clone())
+            .collect()
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct ChronItem<D> {
     validFrom: String, //todo: these are timestamps
@@ -147,7 +160,7 @@ pub struct ChronItem<D> {
     pub data: D
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ChronDivision {
     pub id: Uuid,
     pub name: String,
@@ -171,6 +184,52 @@ pub struct ChronTeam {
     pub seasAttr: Vec<String>,
     pub weekAttr: Vec<String>,
     pub gameAttr: Vec<String>,
+}
+
+impl ChronTeam {
+    pub fn convert(self) -> Team {
+        Team {
+            id: self.id,
+            name: self.fullName,
+            emoji: self.emoji,
+
+            lineup: self.lineup,
+            rotation: self.rotation,
+            shadows: [self.bench, self.bullpen].concat(),
+
+            wins: 0,
+            losses: 0,
+            postseason_wins: 0,
+            postseason_losses: 0,
+            fate: 0, //todo: fate is assigned later each season. retrieve it from chron instead
+
+            mods: modconvert(&[self.permAttr, self.seasAttr, self.weekAttr, self.gameAttr])
+        }
+    }
+}
+
+fn modconvert(mods: &[Vec<String>]) -> Mods {
+    let mut smods = Mods::new();
+    for i in 0..4 {
+        for m in mods[i].iter() {
+            let lifetime = match i {
+                0 => ModLifetime::Permanent,
+                1 => ModLifetime::Season,
+                2 => ModLifetime::Week,
+                3 => ModLifetime::Game,
+                _ => {
+                    panic!("Invalid parsed lifetime, somehow")
+                }
+            };
+            let smod = Mod::from_str(m.as_str());
+            if smod.is_err() {
+                println!("Couldn't parse mod {}", m);
+                continue;
+            }
+            smods.add(smod.unwrap(), lifetime);
+        }
+    }
+    smods
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -217,3 +276,47 @@ pub struct ChronPlayer {
     pub gameAttr: Vec<String>
 }
 
+impl ChronPlayer {
+    pub fn convert(self) -> Player {
+        Player {
+            id: self.id,
+            name: self.name,
+            mods: modconvert(&[self.permAttr, self.seasAttr, self.weekAttr, self.gameAttr]),
+            legendary_item: None,
+            team: Some(self.leagueTeamId),
+
+            feed: Events::new(),
+
+            buoyancy: self.buoyancy,
+            divinity: self.divinity,
+            martyrdom: self.martyrdom,
+            moxie: self.moxie,
+            musclitude: self.musclitude,
+            patheticism: self.patheticism,
+            thwackability: self.thwackability,
+            tragicness: self.tragicness,
+            
+            coldness: self.coldness,
+            overpowerment: self.overpowerment,
+            ruthlessness: self.ruthlessness,
+            shakespearianism: self.shakespearianism,
+            suppression: self.suppression,
+            unthwackability: self.unthwackability,
+
+            base_thirst: self.baseThirst,
+            continuation: self.continuation,
+            ground_friction: self.groundFriction,
+            indulgence: self.indulgence,
+            laserlikeness: self.laserlikeness,
+
+            anticapitalism: self.anticapitalism,
+            chasiness: self.chasiness,
+            omniscience: self.omniscience,
+            tenaciousness: self.tenaciousness,
+            watchfulness: self.watchfulness,
+
+            pressurization: self.pressurization,
+            cinnamon: self.cinnamon,
+        }
+    }
+}
