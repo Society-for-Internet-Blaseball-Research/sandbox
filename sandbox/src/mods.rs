@@ -6,6 +6,7 @@ use strum::EnumString;
 pub enum Mod {
     TargetedShame,
     Flinch,
+    #[strum(serialize="WILD")]
     Mild,
     Reverberating,
     Fireproof,
@@ -14,7 +15,9 @@ pub enum Mod {
     Gravity,
     NightVision,
     FourthStrike,
+    #[strum(serialize="DEBT_THREE")]
     DebtU,
+    #[strum(serialize="MARKED")]
     Unstable,
     Superallergic,
     Spicy,
@@ -31,9 +34,13 @@ pub enum Mod {
     Growth,
     ConsolidatedDebt,
     Repeating,
+    #[strum(serialize="EXTRA_BASE")]
     FifthBase,
     Charm,
+    #[strum(serialize="FLIICKERRRIIING")]
     SuperFlickering, //not bothering to type the actual mod name correctly
+    FireEater,
+    Magmatic,
     Traveling,
     Haunted,
     Sealant,

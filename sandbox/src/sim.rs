@@ -480,7 +480,16 @@ impl Plugin for WeatherPlugin {
             Weather::Sun => None,
             Weather::Eclipse => {
                 //todo: add fortification
+                let fire_eaters = poll_for_mod(game, world, Mod::FireEater, true);
                 let incin_roll = rng.next();
+                //todo: the Fire Eater picker prioritizes unstable players
+                if fire_eaters.len() > 0 {
+                    for fe in fire_eaters {
+                        if rng.next() < 0.002 { //estimate
+                            return Some(Event::FireEater { target: fe });
+                        }
+                    }
+                }
                 let target = game.pick_player_weighted(world, rng.next(), |&uuid| !game.runners.contains(uuid), true);
                 let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002; //estimate
                 let regular_check = incin_roll < 0.00045 - 0.0004 * fort;
@@ -837,10 +846,20 @@ impl Plugin for ModPlugin {
                 return Some(Event::MildPitch);
             }
         } else if game.balls == 0 && game.strikes == 0 {
-            if batter_mods.has(Mod::Charm) && rng.next() < 0.015 {
+            let myst = 0.0;
+            let charm_threshold = if world.season_ruleset == 18 {
+                0.014 + 0.006 * myst
+            } else {
+                0.015 + 0.02 * myst
+            };
+            if batter_mods.has(Mod::Charm) && rng.next() < charm_threshold {
                 return Some(Event::CharmWalk);
-            } else if pitcher_mods.has(Mod::Charm) && rng.next() < 0.015 {
+            } else if pitcher_mods.has(Mod::Charm) && rng.next() < charm_threshold {
                 return Some(Event::CharmStrikeout);
+            } else if batter_mods.has(Mod::Magmatic) {
+                //this makes it so magmatic cannot activate on non 0-0 counts
+                //edge cases are, well, not impossible
+                return Some(Event::MagmaticHomeRun);
             }
         }
         None

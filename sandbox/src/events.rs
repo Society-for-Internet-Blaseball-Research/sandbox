@@ -139,6 +139,10 @@ pub enum Event {
     Repeating {
         batter: Uuid,
     },
+    FireEater {
+        target: Uuid
+    },
+    MagmaticHomeRun,
     Inhabiting {
         batter: Uuid,
         inhabit: Uuid,
@@ -216,9 +220,10 @@ impl Event {
             }
             Event::Strikeout | Event::CharmStrikeout => {
                 world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
-                let triple_threat_active = game.balls == 3
-                    || game.runners.occupied(2)
-                    || game.runners.len() == 3;
+                let triple_threat_active = world.player(game.pitcher()).mods.has(Mod::TripleThreat)
+                    && (game.balls == 3
+                        || game.runners.occupied(2)
+                        || game.runners.len() == 3);
                 if triple_threat_active {
                     game.scoreboard.batting_team_mut().score -= 0.3;
                 }
@@ -595,6 +600,24 @@ impl Event {
                 let bt = game.scoreboard.batting_team_mut();
                 bt.batter_index -= 1;
                 bt.batter = Some(batter);
+            },
+            Event::FireEater { target } => {
+                world.player_mut(target).mods.add(Mod::Magmatic, ModLifetime::Permanent);
+            },
+            Event::MagmaticHomeRun => {
+                world.player_mut(game.batter().unwrap()).feed.add(repr.clone());
+                world.player_mut(game.batter().unwrap()).mods.remove(Mod::Magmatic);
+                upgrade_spicy(game, world);
+                let no_runners_on = game.runners.empty();
+                game.runners.advance_all(game.get_bases(world));
+                game.score(world);
+                game.scoreboard.batting_team_mut().score += game.get_run_value();
+                game.scoreboard.batting_team_mut().score += world.player(game.batter().unwrap()).get_run_value();
+                game.base_sweep();
+                if no_runners_on {
+                    game.scoring_plays_inning += 1;
+                } //this is to make sum sun not break
+                game.end_pa();
             },
             Event::Inhabiting { batter: _batter, inhabit } => {
                 let bt = game.scoreboard.batting_team_mut();
