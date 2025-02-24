@@ -39,6 +39,7 @@ pub enum Mod {
     Charm,
     #[strum(serialize="FLIICKERRRIIING")]
     SuperFlickering, //not bothering to type the actual mod name correctly
+    Siphon,
     FireEater,
     Magmatic,
     Traveling,

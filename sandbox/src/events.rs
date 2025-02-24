@@ -393,41 +393,57 @@ impl Event {
                     }
                 }
             },
-            Event::Blooddrain { drainer, target, stat, .. } => {
+            Event::Blooddrain { drainer, target, stat, siphon: _siphon, siphon_effect } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Blooddrain: {}, {}", drainer, target);
                 println!("Drainer team: {}", world.team(world.player(drainer).team.unwrap()).name);
-                let drainer_mut = world.player_mut(drainer);
-                let mut boosts: Vec<f64> = vec![0.0; 26];
-                match stat {
-                    0 => {
-                        //pitching
-                        for i in 8..14 {
-                            boosts[i] = 0.1;
+                match siphon_effect {
+                    -1 => {
+                        let drainer_mut = world.player_mut(drainer);
+                        let mut boosts: Vec<f64> = vec![0.0; 26];
+                        match stat {
+                            0 => {
+                                //pitching
+                                for i in 8..14 {
+                                    boosts[i] = 0.1;
+                                }
+                            },
+                            1 => {
+                                //batting
+                                for i in 0..8 {
+                                    boosts[i] = 0.1;
+                                }
+                            },
+                            2 => {
+                                //defense
+                                for i in 19..24 {
+                                    boosts[i] = 0.1;
+                                }
+                            },
+                            3 => {
+                                //baserunning
+                                for i in 14..19 {
+                                    boosts[i] = 0.1;
+                                }
+                            },
+                            _ => {
+                            }
                         }
+                        drainer_mut.boost(&boosts);
+                    },
+                    0 => {
+                        game.outs += 1;
                     },
                     1 => {
-                        //batting
-                        for i in 0..8 {
-                            boosts[i] = 0.1;
-                        }
+                        game.outs -= 1;
                     },
                     2 => {
-                        //defense
-                        for i in 19..24 {
-                            boosts[i] = 0.1;
-                        }
-                    },
-                    3 => {
-                        //baserunning
-                        for i in 14..19 {
-                            boosts[i] = 0.1;
-                        }
+                        game.balls -= 1;
                     },
                     _ => {
+                        panic!("wrong siphon effect")
                     }
                 }
-                drainer_mut.boost(&boosts);
 
                 let target_mut = world.player_mut(target);
                 let mut decreases: Vec<f64> = vec![0.0; 26];

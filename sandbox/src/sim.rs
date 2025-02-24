@@ -455,14 +455,32 @@ impl Plugin for StealingPlugin {
     }
 }
 
-fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, only_current: bool) -> Vec<Uuid> {
+//exclusion: "all", "current", "playing"
+fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, exclusion: &str) -> Vec<Uuid> {
     let home_team = &game.scoreboard.home_team;
     let away_team = &game.scoreboard.away_team;
 
-    let home_lineup = world.team(home_team.id).lineup.clone();
-    let home_pitcher = if only_current { vec![home_team.pitcher.clone()] } else { world.team(home_team.id).rotation.clone() };
-    let away_lineup = world.team(away_team.id).lineup.clone();
-    let away_pitcher = if only_current { vec![away_team.pitcher.clone()] } else { world.team(away_team.id).rotation.clone() };
+    //not good that runners.runners is accessed directly
+    let home_lineup = if !game.scoreboard.top && exclusion == "playing" { [vec![game.batter().unwrap()], game.runners.iter().map(|r| r.id).collect()].concat() } else { world.team(home_team.id).lineup.clone() };
+    let home_pitcher = if exclusion != "all" { 
+        if !game.scoreboard.top && exclusion == "playing" {
+            Vec::new()
+        } else {
+            vec![home_team.pitcher.clone()] 
+        }
+    } else { 
+        world.team(home_team.id).rotation.clone() 
+    };
+    let away_lineup = if game.scoreboard.top && exclusion == "playing" { [vec![game.batter().unwrap()], game.runners.iter().map(|r| r.id).collect()].concat() } else { world.team(away_team.id).lineup.clone() };
+    let away_pitcher = if exclusion != "all" { 
+        if game.scoreboard.top && exclusion == "playing" {
+            Vec::new()
+        } else {
+            vec![away_team.pitcher.clone()] 
+        }
+    } else { 
+        world.team(away_team.id).rotation.clone() 
+    };
 
     let mut players = vec![home_lineup, home_pitcher, away_lineup, away_pitcher].concat();
 
@@ -480,7 +498,7 @@ impl Plugin for WeatherPlugin {
             Weather::Sun => None,
             Weather::Eclipse => {
                 //todo: add fortification
-                let fire_eaters = poll_for_mod(game, world, Mod::FireEater, true);
+                let fire_eaters = poll_for_mod(game, world, Mod::FireEater, "playing");
                 let incin_roll = rng.next();
                 //todo: the Fire Eater picker prioritizes unstable players
                 if fire_eaters.len() > 0 {
@@ -497,7 +515,7 @@ impl Plugin for WeatherPlugin {
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
-                    let minimized = poll_for_mod(game, world, Mod::Minimized, false);
+                    let minimized = poll_for_mod(game, world, Mod::Minimized, "all");
                     if minimized.len() > 0 {
                         if minimized.len() > 1 { 
                             //assuming that there's
@@ -555,7 +573,7 @@ impl Plugin for WeatherPlugin {
                     return Some(Event::Birds);
                 } //todo: this is definitely not rng accurate
                 
-                let shelled_players = poll_for_mod(game, world, Mod::Shelled, false);
+                let shelled_players = poll_for_mod(game, world, Mod::Shelled, "all");
                 for player in shelled_players {
                     //estimate, not sure how accurate this is
                     let shelled_roll = rng.next();
@@ -679,34 +697,78 @@ impl Plugin for WeatherPlugin {
                 } else {
                     0.00125 - 0.00125 * fort
                 };
-                if rng.next() < drain_threshold { //rulesets
-                    let fielding_team_drains = rng.next() < 0.5;
-                    let is_atbat = rng.next() < 0.5;
+                let siphon_threshold = 0.0025;
+                let siphons = poll_for_mod(game, world, Mod::Siphon, "playing");
+                let drain_roll = rng.next();
+                if drain_roll < drain_threshold || siphons.len() > 0 && drain_roll < siphon_threshold { //rulesets
                     let mut drainer: Uuid;
                     let mut target: Uuid;
-                    if is_atbat {
-                        drainer = if fielding_team_drains { game.pitcher() } else { game.batter().unwrap() };
-                        target = if fielding_team_drains { game.batter().unwrap() } else { game.pitcher() };
-                    } else {
-                        let fielder_roll = rng.next();
-                        let fielder = game.pick_fielder(world, fielder_roll);
-                        let hitter = if game.runners.empty() {
-                            game.batter().unwrap()
+                    let siphon = drain_roll > drain_threshold;
+                    //siphon code
+                    if siphon {
+                        let siphon_player = siphons[rng.index(siphons.len())];
+                        let active_target = rng.next() < 0.5;
+                        if active_target {
+                            target = if siphon_player == game.batter().unwrap() { game.pitcher() } else { game.batter().unwrap() };
                         } else {
-                            game.pick_player_weighted(world, rng.next(), |&uuid| uuid == game.batter().unwrap() || game.runners.contains(uuid), true)
-                        };
-                        drainer = if fielding_team_drains { fielder } else { hitter };
-                        target = if fielding_team_drains { hitter } else { fielder };
+                            let target_roll = rng.next();
+                            if world.player(siphon_player).team.unwrap() == game.scoreboard.batting_team().id {
+                                target = game.pick_fielder(world, target_roll);
+                            } else {
+                                let hitter = if game.runners.empty() {
+                                    game.batter().unwrap()
+                                } else {
+                                    game.pick_player_weighted(world, rng.next(), |&uuid| uuid == game.batter().unwrap() || game.runners.contains(uuid), true)
+                                };
+                                target = hitter
+                            }
+                        }
+                        drainer = siphon_player;
+                    } else {
+                        let fielding_team_drains = rng.next() < 0.5;
+                        let is_atbat = rng.next() < 0.5;
+                        if is_atbat {
+                            drainer = if fielding_team_drains { game.pitcher() } else { game.batter().unwrap() };
+                            target = if fielding_team_drains { game.batter().unwrap() } else { game.pitcher() };
+                        } else {
+                            let fielder_roll = rng.next();
+                            let fielder = game.pick_fielder(world, fielder_roll);
+                            let hitter = if game.runners.empty() {
+                                game.batter().unwrap()
+                            } else {
+                                game.pick_player_weighted(world, rng.next(), |&uuid| uuid == game.batter().unwrap() || game.runners.contains(uuid), true)
+                            };
+                            drainer = if fielding_team_drains { fielder } else { hitter };
+                            target = if fielding_team_drains { hitter } else { fielder };
+                        }
                     }
                     if world.team(world.player(target).team.unwrap()).mods.has(Mod::Sealant) {
                         Some(Event::BlockedDrain { drainer, target })
                     } else {
+                        let siphon_effect_roll = if siphon { rng.next() } else { 0.0 };
+                        let siphon_effect = if siphon_effect_roll < 0.35 {
+                            -1
+                        } else {
+                            if world.player(drainer).team.unwrap() == game.scoreboard.batting_team().id {
+                                if game.outs > 0 && siphon_effect_roll < 0.5 {//wild guesstimates
+                                    1
+                                } else {
+                                    -1
+                                }
+                            } else {
+                                if game.balls > 0 && siphon_effect_roll < 0.8 {
+                                    2
+                                } else {
+                                    0
+                                }
+                            }
+                        };
                         Some(Event::Blooddrain {
                             drainer,
                             target,
                             stat: (rng.next() * 4.0).floor() as u8,
-                            siphon: false,
-                            siphon_effect: -1
+                            siphon,
+                            siphon_effect
                         })
                     }
                 } else {
@@ -879,7 +941,7 @@ impl Plugin for PregamePlugin {
             let mut overperforming = vec![];
             let mut underperforming = vec![];
             //todo: make this a separate event
-            let superyummy = poll_for_mod(game, world, Mod::Superyummy, true);
+            let superyummy = poll_for_mod(game, world, Mod::Superyummy, "current");
             if superyummy.len() > 0 {
                 if let Weather::Peanuts = game.weather {
                     overperforming = [overperforming, superyummy].concat();
@@ -888,7 +950,7 @@ impl Plugin for PregamePlugin {
                 }
             }
             
-            let perk = poll_for_mod(game, world, Mod::Perk, true);
+            let perk = poll_for_mod(game, world, Mod::Perk, "current");
             if perk.len() > 0 {
                 if let Weather::Coffee = game.weather {
                     overperforming = [overperforming, perk].concat();
