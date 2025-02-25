@@ -58,6 +58,49 @@ pub fn divisions(season: u8) -> Option<ChronArray<ChronDivision>> {
     return Some(result);
 }
 
+pub fn hall(season: u8) -> Option<ChronHall> {
+    let timestamp = match season {
+        11 => "2021-03-01T15:00:00Z",
+        _ => todo!(),
+    };
+    let mut result: ChronArray<ChronHall>;
+    let string = format!("json/s{}hall.json", season);
+    let path = Path::new(&string);
+    let cached = path.exists();
+    let ignore_cache = true;
+    if cached && !ignore_cache {
+        let file = fs::read(path);
+        if file.is_err() {
+            println!("cache error: {}", file.unwrap_err());
+            return None;
+        }
+        result = serde_json::from_slice(file.unwrap().as_slice()).unwrap();
+    } else {
+        let url = format!("https://api.sibr.dev/chronicler/v2/entities?type=tributes&at={}", timestamp);
+        let res = get(url);
+        if res.is_err() {
+            println!("request error: {}", res.unwrap_err());
+            return None;
+        }
+        let bytes = res.unwrap().bytes().unwrap();
+        if !Path::new("json").exists() {
+            fs::create_dir("json");
+        }
+        let data = serde_json::from_slice(&bytes);
+        if data.is_ok() {
+            fs::write(path, bytes);
+        } //this looks stupid but it has to to compile
+        if data.is_err() {
+            println!("json error: {}", data.unwrap_err());
+            return None;
+        }
+        result = data.unwrap();
+    }
+    //println!("{:?}", data.unwrap());
+
+    return Some(result.items[0].data.clone());
+}
+
 pub fn team(id: Uuid, season: u8) -> Option<ChronTeam> {
     let timestamp = match season {
         11 => "2021-03-01T15:00:00Z",
@@ -107,7 +150,7 @@ pub fn player(id: Uuid, season: u8) -> Option<ChronPlayer> {
     let string = format!("json/s{}players_{}.json", season, id);
     let path = Path::new(&string);
     let cached = path.exists();
-    let ignore_cache = false;
+    let ignore_cache = true;
     if cached && !ignore_cache {
         let file = fs::read(path);
         if file.is_err() {
@@ -165,6 +208,14 @@ pub struct ChronDivision {
     pub id: Uuid,
     pub name: String,
     pub teams: Vec<Uuid>
+}
+
+pub type ChronHall = Vec<ChronTribute>;
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ChronTribute {
+    pub peanuts: u64,
+    pub playerId: Uuid,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -236,7 +287,7 @@ fn modconvert(mods: &[Vec<String>]) -> Mods {
 pub struct ChronPlayer {
     pub id: Uuid,
     pub name: String,
-    pub leagueTeamId: Uuid,
+    pub leagueTeamId: Option<Uuid>,
     pub deceased: bool,
 
     pub buoyancy: f64,
@@ -283,7 +334,7 @@ impl ChronPlayer {
             name: self.name,
             mods: modconvert(&[self.permAttr, self.seasAttr, self.weekAttr, self.gameAttr]),
             legendary_item: None,
-            team: Some(self.leagueTeamId),
+            team: self.leagueTeamId,
 
             feed: Events::new(),
 
