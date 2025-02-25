@@ -143,6 +143,7 @@ pub enum Event {
         target: Uuid
     },
     MagmaticHomeRun,
+    CrowAmbush,
     Inhabiting {
         batter: Uuid,
         inhabit: Uuid,
@@ -633,6 +634,10 @@ impl Event {
                 if no_runners_on {
                     game.scoring_plays_inning += 1;
                 } //this is to make sum sun not break
+                game.end_pa();
+            },
+            Event::CrowAmbush => {
+                game.outs += 1;
                 game.end_pa();
             },
             Event::Inhabiting { batter: _batter, inhabit } => {

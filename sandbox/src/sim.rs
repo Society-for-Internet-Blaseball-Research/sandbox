@@ -846,6 +846,7 @@ impl Plugin for InningEventPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         let activated = |event: &str| game.events.has(String::from(event), 1);
         //note: inning events happen after the inning switch
+        //they also happen after batter up apparently (?)
         if !activated("TripleThreatDeactivation") && game.inning == 4 && game.scoreboard.top {
             let home_pitcher_deactivated = world.player(game.scoreboard.home_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
             let away_pitcher_deactivated = world.player(game.scoreboard.away_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
@@ -901,7 +902,14 @@ impl Plugin for ModPlugin {
             return Some(Event::HitByPitch { target: batter, hbp_type: 1 });
         } else if pitcher_mods.has(Mod::ConsolidatedDebt) && !batter_mods.has(Mod::Repeating) && rng.next() < 0.02 { //estimate
             return Some(Event::HitByPitch { target: batter, hbp_type: 2 });
-        } else if rng.next() < 0.005 && pitcher_mods.has(Mod::Mild) {
+        } else if pitcher_mods.has(Mod::FriendOfCrows) {
+            if let Weather::Birds = game.weather {
+                if rng.next() < 0.0255 {
+                    return Some(Event::CrowAmbush);
+                }
+            }
+        }
+        if rng.next() < 0.005 && pitcher_mods.has(Mod::Mild) {
             if game.balls == 3 {
                 return Some(Event::MildWalk);
             } else {
@@ -921,6 +929,7 @@ impl Plugin for ModPlugin {
             } else if batter_mods.has(Mod::Magmatic) {
                 //this makes it so magmatic cannot activate on non 0-0 counts
                 //edge cases are, well, not impossible
+                rng.next();
                 return Some(Event::MagmaticHomeRun);
             }
         }

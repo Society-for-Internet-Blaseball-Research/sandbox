@@ -40,6 +40,7 @@ pub enum Mod {
     #[strum(serialize="FLIICKERRRIIING")]
     SuperFlickering, //not bothering to type the actual mod name correctly
     Siphon,
+    FriendOfCrows,
     FireEater,
     Magmatic,
     Traveling,
