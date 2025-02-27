@@ -7,8 +7,27 @@ use std::path::Path;
 use std::str::FromStr;
 use sandbox::{entities::{Player, Team, World}, mods::{Mods, Mod, ModLifetime}, events::Events};
 
-pub fn fill(season: u8) {
-
+pub fn world(season: u8) -> World {
+    let mut world = World::new(season);
+    let divisions = divisions(season).unwrap().convert();
+    for &t in divisions .iter() {
+        let team = team(t, season).unwrap().convert();
+        world.insert_team(team);
+        //there's got to be a better way
+        for p in world.team(t).rotation.clone() {
+            world.insert_player(player(p, season).unwrap().convert());
+        }
+        for p in world.team(t).lineup.clone() {
+            world.insert_player(player(p, season).unwrap().convert());
+        }
+        for p in world.team(t).shadows.clone() {
+            world.insert_player(player(p, season).unwrap().convert());
+        }
+    }
+    for p in hall(season).unwrap() {
+        world.insert_player(player(p.playerId, season).unwrap().convert());
+    }
+    return world;
 }
 
 //todo: unwrap -> ?, println! -> panic!
@@ -67,7 +86,7 @@ pub fn hall(season: u8) -> Option<ChronHall> {
     let string = format!("json/s{}hall.json", season);
     let path = Path::new(&string);
     let cached = path.exists();
-    let ignore_cache = true;
+    let ignore_cache = false;
     if cached && !ignore_cache {
         let file = fs::read(path);
         if file.is_err() {
@@ -150,7 +169,7 @@ pub fn player(id: Uuid, season: u8) -> Option<ChronPlayer> {
     let string = format!("json/s{}players_{}.json", season, id);
     let path = Path::new(&string);
     let cached = path.exists();
-    let ignore_cache = true;
+    let ignore_cache = false;
     if cached && !ignore_cache {
         let file = fs::read(path);
         if file.is_err() {
@@ -319,7 +338,7 @@ pub struct ChronPlayer {
     pub watchfulness: f64,
 
     pub pressurization: f64,
-    pub cinnamon: f64,
+    pub cinnamon: Option<f64>, //lol
 
     pub permAttr: Vec<String>,
     pub seasAttr: Vec<String>,
@@ -367,7 +386,7 @@ impl ChronPlayer {
             watchfulness: self.watchfulness,
 
             pressurization: self.pressurization,
-            cinnamon: self.cinnamon,
+            cinnamon: self.cinnamon.unwrap_or(0.0),
         }
     }
 }

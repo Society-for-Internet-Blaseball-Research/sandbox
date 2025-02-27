@@ -563,6 +563,12 @@ impl Plugin for WeatherPlugin {
                         target,
                         yummy: false
                     })
+                } else if world.player(game.batter().unwrap()).mods.has(Mod::HoneyRoasted) && rng.next() < 0.0076 {
+                    //todo: we don't know
+                    rng.next();
+                    Some(Event::TasteTheInfinite { target: game.pick_fielder(world, rng.next()) })
+                } else if world.player(game.pitcher()).mods.has(Mod::HoneyRoasted) && rng.next() < 0.0061 {
+                    Some(Event::TasteTheInfinite { target: game.batter().unwrap() })
                 } else {
                     None
                 }

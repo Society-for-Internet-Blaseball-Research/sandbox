@@ -144,6 +144,9 @@ pub enum Event {
     },
     MagmaticHomeRun,
     CrowAmbush,
+    TasteTheInfinite {
+        target: Uuid
+    },
     Inhabiting {
         batter: Uuid,
         inhabit: Uuid,
@@ -639,6 +642,9 @@ impl Event {
             Event::CrowAmbush => {
                 game.outs += 1;
                 game.end_pa();
+            },
+            Event::TasteTheInfinite { target } => {
+                world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
             },
             Event::Inhabiting { batter: _batter, inhabit } => {
                 let bt = game.scoreboard.batting_team_mut();

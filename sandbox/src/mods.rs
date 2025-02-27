@@ -5,6 +5,7 @@ use strum::EnumString;
 #[strum(serialize_all="SCREAMING_SNAKE_CASE")]
 pub enum Mod {
     TargetedShame,
+    Alternate,
     Flinch,
     #[strum(serialize="WILD")]
     Mild,
@@ -43,6 +44,7 @@ pub enum Mod {
     FriendOfCrows,
     FireEater,
     Magmatic,
+    HoneyRoasted,
     Traveling,
     Haunted,
     Sealant,
@@ -55,6 +57,7 @@ pub enum Mod {
     ONo,
     Wired,
     Tired,
+    #[strum(serialize="COFFEE_RALLY")]
     FreeRefill,
     TripleThreat,
     Perk
