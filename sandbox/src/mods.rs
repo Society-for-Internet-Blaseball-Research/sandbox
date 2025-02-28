@@ -5,7 +5,7 @@ use strum::EnumString;
 #[strum(serialize_all="SCREAMING_SNAKE_CASE")]
 pub enum Mod {
     TargetedShame,
-    Alternate,
+    //Alternate,
     Flinch,
     #[strum(serialize="WILD")]
     Mild,
@@ -18,14 +18,19 @@ pub enum Mod {
     FourthStrike,
     #[strum(serialize="DEBT_THREE")]
     DebtU,
+    //Returned
     #[strum(serialize="MARKED")]
     Unstable,
+    //FirstBorn,
     Superallergic,
     Spicy,
     HeatingUp,
     RedHot,
     Minimized,
     Electric,
+    #[strum(serialize="NON_IDOLIZED")]
+    //IdolImmune,
+    //SuperIdol,
     RefinancedDebt,
     Flickering,
     Stable,
@@ -40,6 +45,7 @@ pub enum Mod {
     Charm,
     #[strum(serialize="FLIICKERRRIIING")]
     SuperFlickering, //not bothering to type the actual mod name correctly
+    Squiddish,
     Siphon,
     FriendOfCrows,
     FireEater,

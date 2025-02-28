@@ -86,6 +86,16 @@ impl World {
         team2.replace_player(player2_id, player1_id);
     }
 
+    pub fn swap_hall(&mut self, player1_id: Uuid, player2_id: Uuid) {
+        let team_id_1 = self.player(player1_id).team.unwrap();
+        let player1 = self.player_mut(player1_id);
+        player1.team = None;
+        let player2 = self.player_mut(player2_id);
+        player2.team = Some(team_id_1);
+        let team1 = self.team_mut(team_id_1);
+        team1.replace_player(player1_id, player2_id);
+    }
+
     pub fn gen_team(&mut self, rng: &mut Rng, name: String, emoji: String) -> Uuid {
         let id = Uuid::new_v4();
         let mut team = Team {

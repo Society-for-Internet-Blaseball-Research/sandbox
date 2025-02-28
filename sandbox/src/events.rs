@@ -54,7 +54,8 @@ pub enum Event {
     },
     Incineration {
         target: Uuid,
-        replacement: Player
+        replacement: Player,
+        chain: Option<Uuid>
     },
     Peanut {
         target: Uuid,
@@ -111,11 +112,6 @@ pub enum Event {
     HitByPitch {
         target: Uuid,
         hbp_type: u8
-    },
-    IncinerationWithChain {
-        target: Uuid,
-        replacement: Player,
-        chain: Option<Uuid>
     },
     PeckedFree {
         player: Uuid
@@ -333,22 +329,33 @@ impl Event {
                 game.runners.remove(base_from);
                 game.outs += 1;
             },
-            Event::Incineration { target, ref replacement } => {
+            Event::Incineration { target, ref replacement, chain } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Incineration: {}", target);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
-                let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
+                let new_player = replacement.name == "";
+                let replacement_id = if new_player {
+                    world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap())
+                } else {
+                    replacement.id
+                };
                 if let Some(batter) = game.batter() {
                     if batter == target {
-                        game.assign_batter(replacement_id);
+                        game.scoreboard.batting_team_mut().batter = Some(replacement_id);
                     }
-                }
-                if target == game.pitcher() {
-                    game.assign_pitcher(replacement_id);
+                } else if target == game.pitcher() {
+                    game.scoreboard.pitching_team_mut().pitcher = replacement_id;
                 } else if target == game.scoreboard.batting_team().pitcher {
                     game.scoreboard.batting_team_mut().pitcher = replacement_id;
                 }
-                world.replace_player(target, replacement_id);
+                if new_player {
+                    world.replace_player(target, replacement_id);
+                } else {
+                    world.swap_hall(target, replacement_id);
+                }
+                if chain.is_some() {
+                    world.player_mut(chain.unwrap()).mods.add(Mod::Unstable, ModLifetime::Week);
+                }
             },
             Event::Peanut { target, yummy } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
@@ -562,20 +569,6 @@ impl Event {
                 game.score(world);
                 game.base_sweep();
                 game.end_pa();
-            },
-            Event::IncinerationWithChain { target, ref replacement, chain } => {
-                let replacement_id = world.add_rolled_player(replacement.clone(), world.player(target).team.unwrap());
-                if let Some(batter) = game.batter() {
-                    if batter == target {
-                        game.scoreboard.batting_team_mut().batter = Some(replacement_id);
-                    }
-                } else if target == game.pitcher() {
-                    game.scoreboard.pitching_team_mut().pitcher = replacement_id;
-                }
-                world.replace_player(target, replacement_id);
-                if chain.is_some() {
-                    world.player_mut(chain.unwrap()).mods.add(Mod::Unstable, ModLifetime::Week);
-                }
             },
             Event::PeckedFree { player } => {
                 world.player_mut(player).mods.remove(Mod::Shelled);

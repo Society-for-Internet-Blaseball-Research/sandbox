@@ -509,8 +509,8 @@ impl Plugin for WeatherPlugin {
                     }
                 }
                 let target = game.pick_player_weighted(world, rng.next(), |&uuid| !game.runners.contains(uuid), true);
-                let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002; //estimate
-                let regular_check = incin_roll < 0.00045 - 0.0004 * fort;
+                let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.02; //estimate
+                let regular_check = incin_roll < 0.0045 - 0.004 * fort;
                 if unstable_check || regular_check { //estimate
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
@@ -528,22 +528,21 @@ impl Plugin for WeatherPlugin {
                             }
                         }
                     }
+                    let chain: Option<Uuid> = None;
                     if unstable_check {
                         let chain_target = game.pick_player_weighted(world, rng.next(), |&uuid| world.player(uuid).team.unwrap() != world.player(target).team.unwrap(), false);
-                        let replacement = Player::new(rng); 
                         let chain = if world.player(chain_target).mods.has(Mod::Stable) { None } else { Some(chain_target) };//assumption
-                        Some(Event::IncinerationWithChain { 
-                            target,
-                            replacement,
-                            chain
-                        })
-                    } else {
-                        let replacement = Player::new(rng);
-                        Some(Event::Incineration { 
-                            target,
-                            replacement
-                        })
                     }
+                    let replacement = if world.player(target).mods.has(Mod::Squiddish) {
+                        world.player(world.random_hall_player(rng)).clone()
+                    } else {
+                        Player::new(rng)
+                    };
+                    Some(Event::Incineration { 
+                        target,
+                        replacement,
+                        chain
+                    })
                 } else {
                     None
                 }
