@@ -26,6 +26,7 @@ pub fn world(season: u8) -> World {
     }
     for p in hall(season).unwrap() {
         world.insert_player(player(p.playerId, season).unwrap().convert());
+        world.hall.push(p.playerId);
     }
     return world;
 }
@@ -69,7 +70,6 @@ pub fn divisions(season: u8) -> Option<ChronArray<ChronDivision>> {
         }
         result = data.unwrap();
     }
-    //println!("{:?}", data.unwrap());
     if season == 11 {
         result.items.retain(|item| item.validTo.is_some());
     }
@@ -115,9 +115,58 @@ pub fn hall(season: u8) -> Option<ChronHall> {
         }
         result = data.unwrap();
     }
-    //println!("{:?}", data.unwrap());
 
     return Some(result.items[0].data.clone());
+}
+
+pub fn tiebreakers(season: u8) -> Option<Vec<Uuid>> {
+    let timestamp = match season {
+        11 => "2021-03-01T00:00:00Z",
+        _ => todo!(),
+    };
+    let timestamp_before = match season {
+        11 => "2021-03-01T15:00:00Z",
+        _ => todo!(),
+    };
+    let mut result: ChronArray<ChronFate>;
+    let string = format!("json/s{}fate.json", season);
+    let path = Path::new(&string);
+    let cached = path.exists();
+    let ignore_cache = true;
+    if cached && !ignore_cache {
+        let file = fs::read(path);
+        if file.is_err() {
+            println!("cache error: {}", file.unwrap_err());
+            return None;
+        }
+        result = serde_json::from_slice(file.unwrap().as_slice()).unwrap();
+    } else {
+        //have to do this because of non-standard data in the entities API
+        let url = format!("https://api.sibr.dev/chronicler/v2/versions?type=tiebreakers&before={}&after={}", timestamp_before, timestamp);
+        let res = get(url);
+        if res.is_err() {
+            println!("request error: {}", res.unwrap_err());
+            return None;
+        }
+        let bytes = res.unwrap().bytes().unwrap();
+        if !Path::new("json").exists() {
+            fs::create_dir("json");
+        }
+        let data = serde_json::from_slice(&bytes);
+        if data.is_ok() {
+            fs::write(path, bytes);
+        } //this looks stupid but it has to to compile
+        if data.is_err() {
+            println!("json error: {}", data.unwrap_err());
+            return None;
+        }
+        result = data.unwrap();
+    }
+    if season == 11 {
+        result.items.retain(|item| item.validTo.is_some());
+    }
+
+    return Some(result.items[0].data.order.clone());
 }
 
 pub fn team(id: Uuid, season: u8) -> Option<ChronTeam> {
@@ -156,7 +205,6 @@ pub fn team(id: Uuid, season: u8) -> Option<ChronTeam> {
         }
         result = data.unwrap();
     }
-    //println!("{:?}", data.unwrap());
     return Some(result.items[0].data.clone());
 }
 
@@ -196,7 +244,6 @@ pub fn player(id: Uuid, season: u8) -> Option<ChronPlayer> {
         }
         result = data.unwrap();
     }
-    //println!("{:?}", data.unwrap());
     return Some(result.items[0].data.clone());
 }
 
@@ -235,6 +282,12 @@ pub type ChronHall = Vec<ChronTribute>;
 pub struct ChronTribute {
     pub peanuts: u64,
     pub playerId: Uuid,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct ChronFate {
+    pub id: Uuid,
+    pub order: Vec<Uuid>
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -282,6 +335,7 @@ fn modconvert(mods: &[Vec<String>]) -> Mods {
     let mut smods = Mods::new();
     for i in 0..4 {
         for m in mods[i].iter() {
+            let ignore = ["ALTERNATE", "RECEIVER", "RETURNED", "FIRST_BORN", "NON_IDOLIZED", "DOUBLE_PAYOUTS", "SUPER_IDOL", "CREDIT_TO_THE_TEAM"];
             let lifetime = match i {
                 0 => ModLifetime::Permanent,
                 1 => ModLifetime::Season,
@@ -291,12 +345,14 @@ fn modconvert(mods: &[Vec<String>]) -> Mods {
                     panic!("Invalid parsed lifetime, somehow")
                 }
             };
-            let smod = Mod::from_str(m.as_str());
-            if smod.is_err() {
-                println!("Couldn't parse mod {}", m);
-                continue;
+            if !ignore.contains(&m.as_str()) {
+                let smod = Mod::from_str(m.as_str());
+                if smod.is_err() {
+                    println!("Couldn't parse mod {}", m);
+                    continue;
+                }
+                smods.add(smod.unwrap(), lifetime);
             }
-            smods.add(smod.unwrap(), lifetime);
         }
     }
     smods

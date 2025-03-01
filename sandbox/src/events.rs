@@ -331,7 +331,7 @@ impl Event {
             },
             Event::Incineration { target, ref replacement, chain } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
-                println!("Incineration: {}", target);
+                println!("Incineration: {}", world.player(target).name);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 let new_player = replacement.name == "";
                 let replacement_id = if new_player {
@@ -359,7 +359,7 @@ impl Event {
             },
             Event::Peanut { target, yummy } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
-                println!("Peanut: {}", target);
+                println!("Peanut: {}", world.player(target).name);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 let coeff = if yummy {
                     0.2
@@ -373,7 +373,7 @@ impl Event {
             Event::Birds => {},
             Event::Feedback { target1, target2 } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
-                println!("Feedback: {}, {}", target1, target2);
+                println!("Feedback: {}, {}", world.player(target1).name, world.player(target2).name);
                 if let Some(batter) = game.batter() {
                     if batter == target1 {
                         game.assign_batter(target2);
@@ -406,7 +406,7 @@ impl Event {
             },
             Event::Blooddrain { drainer, target, stat, siphon: _siphon, siphon_effect } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
-                println!("Blooddrain: {}, {}", drainer, target);
+                println!("Blooddrain: {}, {}", world.player(drainer).name, world.player(target).name);
                 println!("Drainer team: {}", world.team(world.player(drainer).team.unwrap()).name);
                 match siphon_effect {
                     -1 => {
@@ -488,15 +488,35 @@ impl Event {
             Event::Sun2 { home_team } => {
                 if home_team {
                     game.scoreboard.home_team.score -= 10.0;
+                    if game.day > 98 {
+                        world.team_mut(game.scoreboard.home_team.id).postseason_wins += 1;
+                    } else {
+                        world.team_mut(game.scoreboard.home_team.id).wins += 1;
+                    }
                 } else {
                     game.scoreboard.away_team.score -= 10.0;
+                    if game.day > 98 {
+                        world.team_mut(game.scoreboard.away_team.id).postseason_wins += 1;
+                    } else {
+                        world.team_mut(game.scoreboard.away_team.id).wins += 1;
+                    }
                 }
             }
             Event::BlackHole { home_team } => {
                 if home_team {
                     game.scoreboard.home_team.score -= 10.0;
+                    if game.day > 98 {
+                        world.team_mut(game.scoreboard.away_team.id).postseason_wins -= 1;
+                    } else {
+                        world.team_mut(game.scoreboard.away_team.id).wins -= 1;
+                    }
                 } else {
                     game.scoreboard.away_team.score -= 10.0;
+                    if game.day > 98 {
+                        world.team_mut(game.scoreboard.home_team.id).postseason_wins -= 1;
+                    } else {
+                        world.team_mut(game.scoreboard.home_team.id).wins -= 1;
+                    }
                 }
             },
             Event::Salmon { home_runs_lost, away_runs_lost } => {
@@ -591,7 +611,7 @@ impl Event {
             },
             Event::BigPeanut { target } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
-                println!("Shelled by big peanut: {}", target);
+                println!("Shelled by big peanut: {}", world.player(target).name);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
                 world.player_mut(target).mods.add(Mod::Shelled, ModLifetime::Permanent);
             },

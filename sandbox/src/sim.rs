@@ -509,8 +509,8 @@ impl Plugin for WeatherPlugin {
                     }
                 }
                 let target = game.pick_player_weighted(world, rng.next(), |&uuid| !game.runners.contains(uuid), true);
-                let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.02; //estimate
-                let regular_check = incin_roll < 0.0045 - 0.004 * fort;
+                let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002; //estimate
+                let regular_check = incin_roll < 0.00045 - 0.0004 * fort;
                 if unstable_check || regular_check { //estimate
                     if world.player(target).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });

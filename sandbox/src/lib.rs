@@ -38,27 +38,46 @@ pub enum Weather {
 }
 
 impl Weather {
-    pub fn generate(rng: &mut Rng, _season_ruleset: u8) -> Weather {
+    pub fn generate(rng: &mut Rng, season_ruleset: u8) -> Weather {
         //todo: actually implement this
-        /*let weights = match season_ruleset {
-            11 -> [],
-            12..24 -> todo!(),
-        };*/
-        let roll = rng.index(20);
-        //todo: add season rulesets
-        if roll < 1 {
-            Weather::Eclipse
-        } else if roll < 2 {
-            Weather::Blooddrain
-        } else if roll < 8 {
-            Weather::Peanuts
-        } else if roll < 11 {
-            Weather::Birds
-        } else if roll < 14 {
-            Weather::Feedback
-        } else {
-            Weather::Reverb
+        let weights = match season_ruleset {
+            11 => [50, 20, 20, 35, 20, 20, 20, 50, 2, 2, 1], //todo: idk this just feels wrong
+            _ => todo!(),
+        };
+        let weight_sum = match season_ruleset {
+            11 => 240,
+            _ => todo!(),
+        };
+        let weathers = [
+            Weather::Sun2, 
+            Weather::Eclipse, 
+            Weather::Blooddrain, 
+            Weather::Peanuts, 
+            Weather::Birds, 
+            Weather::Feedback,
+            Weather::Reverb,
+            Weather::BlackHole,
+            Weather::Coffee,
+            Weather::Coffee2,
+            Weather::Coffee3,
+            //Weather::Glitter,
+            //Weather::Flooding,
+            Weather::Salmon,
+            Weather::PolarityPlus,
+            Weather::SunPointOne,
+            Weather::SumSun
+        ];
+        let roll = rng.index(weight_sum);
+        let mut slider = 0;
+        for i in 0..weights.len() {
+            let weight = weights[i];
+            slider += weight;
+            let weather = weathers[i].clone();
+            if roll < slider {
+                return weather;
+            }
         }
+        return Weather::Sun;
     }
 }
 

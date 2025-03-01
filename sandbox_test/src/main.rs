@@ -1,4 +1,7 @@
-use crate::schedule::{generate_games, generate_schedule};
+use crate::{
+    schedule::{generate_games, generate_schedule},
+    get::{world, divisions, tiebreakers}
+};
 use sandbox::{
     entities::{LegendaryItem, NameGen, World},
     events::Event,
@@ -11,51 +14,64 @@ use uuid::Uuid;
 
 mod schedule;
 mod postseason;
+mod get;
 
 fn main() {
     //edit seed
-    let mut rng = Rng::new(69, 420);
+    //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
     //let mut rng = Rng::new(3141592653589793238, 2718281828459045235);
     //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
+    
+    let mut rng = Rng::new(12933895067857275469, 10184511423779887981); //s12 seed
 
-    let mut world = World::new(11); //0-indexed season number
+    //let mut world = World::new(11); //0-indexed season number
+    let mut world = world(11);
     //let name_gen = NameGen::new();
+    let mut prefill = true;
+
     let mut teams: Vec<Uuid> = Vec::new();
     let team_names: Vec<&str> = include_str!("teams.txt").split(",").collect();
     let emojis: Vec<&str> = include_str!("emojis.txt").split(" ").collect();
     //todo: dehardcode team number
-    for i in 0..20 {
-        teams.push(world.gen_team(&mut rng, team_names[i].to_string(), emojis[i].to_string()));
+    if !prefill {
+        for i in 0..20 {
+            teams.push(world.gen_team(&mut rng, team_names[i].to_string(), emojis[i].to_string()));
+        }
     }
     //this is supposed to be editable so it's in human readable format
     //IMPORTANT: team names in teams.txt must be sorted alphabetically
     let divisions: Vec<Uuid> = 
-        vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings",
-        "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Unlimited Tacos",
-        "Dallas Steaks", "New York Millennials", "Philly Pies", "San Francisco Lovers", "Seattle Garages", 
-        "Canada Moist Talkers", "Charleston Shoe Thieves", "Hawai'i Fridays", "Kansas City Breath Mints", "Yellowstone Magic"]
-            .iter()
-            .map(|s| teams[team_names.binary_search(s).expect("team not found")])
-            .collect();
+        if prefill {
+            divisions(11).unwrap().convert()
+        } else {
+            vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings",
+            "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Unlimited Tacos",
+            "Dallas Steaks", "New York Millennials", "Philly Pies", "San Francisco Lovers", "Seattle Garages", 
+            "Canada Moist Talkers", "Charleston Shoe Thieves", "Hawai'i Fridays", "Kansas City Breath Mints", "Yellowstone Magic"]
+                .iter()
+                .map(|s| teams[team_names.binary_search(s).expect("team not found")])
+                .collect()
+        };
 
     //edit mods and legendary items
     //world.team_mut(team_a).mods.add(Mod::FourthStrike, ModLifetime::Season);
     //world.team_name_mut(String::from("Hades Tigers")).mods.add(Mod::HomeFieldAdvantage, ModLifetime::Season);
-    //world.player_mut(world.team_name(String::from("Miami Dale")).lineup[4]).mods.add(Mod::Electric, ModLifetime::Game);
+    //world.player_mut(world.team_name(String::from("Kansas City Breath Mints")).lineup[2]).mods.add(Mod::Squiddish, ModLifetime::Permanent);
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
     //world.player_mut(world.team_name(String::from("Charleston Shoe Thieves")).rotation[0]).mods.add(Mod::Superyummy, ModLifetime::Permanent);
     
+    let mut fate_vec: Vec<Uuid> = tiebreakers(11).unwrap();
     let mut fate_pool: Vec<usize> = (0..20).collect();
     for i in 0..20 {
-        let fate_roll = fate_pool[rng.index(20 - i)];
-        world.team_mut(teams[i]).fate = fate_roll;
+        let fate_roll = if prefill { fate_vec.iter().position(|&id| id == divisions[i]).unwrap() } else { fate_pool[rng.index(20 - i)] };
+        world.team_mut(divisions[i]).fate = fate_roll;
         //println!("{} {}", world.team(teams[i]).name, world.team(teams[i]).fate);
-        fate_pool.retain(|&j| j != fate_roll);
+        if !prefill { fate_pool.retain(|&j| j != fate_roll) };
     }
     let mut sim = Sim::new(&mut world, &mut rng);
-    let season_mode = false;
+    let season_mode = true;
     if season_mode {
         let days_in_season = 99;
         let games = generate_games(generate_schedule(days_in_season, &divisions, sim.rng), sim.world, sim.rng);
@@ -179,16 +195,18 @@ fn main() {
         println!("Wildcard: {} {}-{} {}", sim.world.team(playoff_seeds2[3]).name, sim.world.team(playoff_seeds2[3]).postseason_wins, sim.world.team(playoff_seeds2[4]).postseason_wins, sim.world.team(playoff_seeds2[4]).name);
 
         playoff_seeds1.retain(|&t| {
+            let wins = sim.world.team(t).postseason_wins;
             let losses = sim.world.team(t).postseason_losses;
             sim.world.team_mut(t).postseason_wins = 0;
             sim.world.team_mut(t).postseason_losses = 0;
-            losses < 2
+            wins + losses == 0 || wins > losses
         });
         playoff_seeds2.retain(|&t| {
+            let wins = sim.world.team(t).postseason_wins;
             let losses = sim.world.team(t).postseason_losses;
             sim.world.team_mut(t).postseason_wins = 0;
             sim.world.team_mut(t).postseason_losses = 0;
-            losses < 2
+            wins + losses == 0 || wins > losses
         });
 
         for i in 0..5 {
@@ -263,7 +281,7 @@ fn main() {
             sim.world.team_mut(t).postseason_losses = 0;
             wins > losses
         });
-    
+
         let higher_seed = 
             if sim.world.team(playoff_seeds1[0]).wins > sim.world.team(playoff_seeds2[0]).wins 
             || sim.world.team(playoff_seeds1[0]).wins == sim.world.team(playoff_seeds2[0]).wins && sim.world.team(playoff_seeds1[0]).fate < sim.world.team(playoff_seeds2[0]).fate { 
@@ -308,7 +326,11 @@ fn main() {
         sim.world.clear_season();
     } else {
         //todo: id by name function
-        let mut game = Game::new(divisions[8], divisions[19], 0, Some(Weather::Coffee3), sim.world, sim.rng); 
+        /*let id = sim.world.gen_player(sim.rng, divisions[6]);
+        println!("{}", id);
+        sim.world.player_mut(id).team = None;
+        sim.world.hall.push(id);*/
+        let mut game = Game::new(divisions[18], divisions[6], 0, Some(Weather::Eclipse), sim.world, sim.rng); 
         println!("{} at {}, {:?}",
             sim.world.team(game.scoreboard.away_team.id).name,
             sim.world.team(game.scoreboard.home_team.id).name,
