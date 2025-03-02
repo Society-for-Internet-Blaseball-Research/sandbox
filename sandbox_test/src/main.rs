@@ -98,47 +98,8 @@ fn main() {
                     evt.apply(game, sim.world);
         
                     if let Event::GameOver = evt {
-                        /*println!(
-                            "game over! {}: {}, {}: {}",
-                            sim.world.team(game.scoreboard.away_team.id).name,
-                            game.scoreboard.away_team.score,
-                            sim.world.team(game.scoreboard.home_team.id).name,
-                            game.scoreboard.home_team.score
-                        );*/
                         games_deactivated.push(game.id);
                     }
-                    /*let base = if game.runners.base_number == 5 {
-                        format!(
-                        "[{}|{}|{}|{}]",
-                        if game.runners.occupied(3) { "X" } else { " " },
-                        if game.runners.occupied(2) { "X" } else { " " },
-                        if game.runners.occupied(1) { "X" } else { " " },
-                        if game.runners.occupied(0) { "X" } else { " " }
-                        )
-                    } else {
-                        format!(
-                        "[{}|{}|{}]",
-                        if game.runners.occupied(2) { "X" } else { " " },
-                        if game.runners.occupied(1) { "X" } else { " " },
-                        if game.runners.occupied(0) { "X" } else { " " }
-                        )
-                    };
-
-                    let away_score = (game.scoreboard.away_team.score * 10.0).round() / 10.0;
-                    let home_score = (game.scoreboard.home_team.score * 10.0).round() / 10.0; //floats
-
-                    println!(
-                        "{}{} {}@{} ({}b/{}s/{}o) {} {:?}",
-                        if game.top { "t" } else { "b" },
-                        game.inning,
-                        away_score,
-                        home_score,
-                        game.balls,
-                        game.strikes,
-                        game.outs,
-                        base,
-                        evt
-                    );*/
                 }
                 games_active.retain(|g| !games_deactivated.contains(&g.id));
                 if games_active.len() == 0 {
