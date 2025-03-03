@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{entities::{World, Player}, events::Event, formulas, mods::Mod, rng::Rng, Game, Weather};
+use crate::{entities::{World, Player}, events::Event, formulas, mods::{Mod, Mods}, rng::Rng, Game, Weather};
 
 pub trait Plugin {
     fn tick(&self, _game: &Game, _world: &World, _rng: &mut Rng) -> Option<Event> {
@@ -94,7 +94,7 @@ impl Plugin for BasePlugin {
             }
             PitchOutcome::StrikeLooking => {
                 if last_strike {
-                    if world.player(game.batter().unwrap()).mods.has(Mod::ONo) && game.balls == 0 {
+                    if world.team(game.scoreboard.batting_team().id).mods.has(Mod::ONo) && game.balls == 0 {
                         Event::Foul
                     } else {
                         Event::Strikeout
@@ -512,7 +512,7 @@ impl Plugin for WeatherPlugin {
                 let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002; //estimate
                 let regular_check = incin_roll < 0.00045 - 0.0004 * fort;
                 if unstable_check || regular_check { //estimate
-                    if world.player(target).mods.has(Mod::Fireproof) {
+                    if world.player(target).mods.has(Mod::Fireproof) || world.team(world.player(target).team.unwrap()).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
                     let minimized = poll_for_mod(game, world, Mod::Minimized, "all");
@@ -895,11 +895,13 @@ impl Plugin for ModPlugin {
         //this whole function? rulesets
         let batter = game.batter().unwrap();
         let batter_mods = &world.player(batter).mods;
+        let batter_team_mods = &world.team(game.scoreboard.batting_team().id).mods;
         let pitcher = game.pitcher();
         let pitcher_mods = &world.player(pitcher).mods;
-        if batter_mods.has(Mod::Electric) && game.strikes > 0 && rng.next() < 0.2 {
+        let pitcher_team_mods = &world.team(game.scoreboard.pitching_team().id).mods;
+        if batter_team_mods.has(Mod::Electric) && game.strikes > 0 && rng.next() < 0.2 {
             return Some(Event::Zap { batter: true });
-        } else if pitcher_mods.has(Mod::Electric) && game.balls > 0 && rng.next() < 0.2 {
+        } else if pitcher_team_mods.has(Mod::Electric) && game.balls > 0 && rng.next() < 0.2 {
             return Some(Event::Zap { batter: false });
         } else if pitcher_mods.has(Mod::DebtU) && !batter_mods.has(Mod::Unstable) && rng.next() < 0.02 { //estimate
             return Some(Event::HitByPitch { target: batter, hbp_type: 0 });
@@ -922,7 +924,7 @@ impl Plugin for ModPlugin {
             }
         } else if game.balls == 0 && game.strikes == 0 {
             let myst = 0.0;
-            let charm_threshold = if world.season_ruleset == 18 {
+        let charm_threshold = if world.season_ruleset == 18 {
                 0.014 + 0.006 * myst
             } else {
                 0.015 + 0.02 * myst
