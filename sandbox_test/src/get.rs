@@ -58,11 +58,15 @@ pub fn divisions(season: u8) -> Option<ChronArray<ChronDivision>> {
         }
         let bytes = res.unwrap().bytes().unwrap();
         if !Path::new("json").exists() {
-            fs::create_dir("json");
+            if fs::create_dir("json").is_err() {
+                println!("directory creation error");
+            }
         }
         let data = serde_json::from_slice(&bytes);
         if data.is_ok() {
-            fs::write(path, bytes);
+            if fs::write(path, bytes).is_err() {
+                println!("write error");
+            }
         } //this looks stupid but it has to to compile
         if data.is_err() {
             println!("json error: {}", data.unwrap_err());
@@ -103,11 +107,15 @@ pub fn hall(season: u8) -> Option<ChronHall> {
         }
         let bytes = res.unwrap().bytes().unwrap();
         if !Path::new("json").exists() {
-            fs::create_dir("json");
+            if fs::create_dir("json").is_err() {
+                println!("directory creation error");
+            }
         }
         let data = serde_json::from_slice(&bytes);
         if data.is_ok() {
-            fs::write(path, bytes);
+            if fs::write(path, bytes).is_err() {
+                println!("write error");
+            }
         } //this looks stupid but it has to to compile
         if data.is_err() {
             println!("json error: {}", data.unwrap_err());
@@ -150,11 +158,15 @@ pub fn tiebreakers(season: u8) -> Option<Vec<Uuid>> {
         }
         let bytes = res.unwrap().bytes().unwrap();
         if !Path::new("json").exists() {
-            fs::create_dir("json");
+            if fs::create_dir("json").is_err() {
+                println!("directory creation error");
+            }
         }
         let data = serde_json::from_slice(&bytes);
         if data.is_ok() {
-            fs::write(path, bytes);
+            if fs::write(path, bytes).is_err() {
+                println!("write error");
+            }
         } //this looks stupid but it has to to compile
         if data.is_err() {
             println!("json error: {}", data.unwrap_err());
@@ -195,10 +207,16 @@ pub fn team(id: Uuid, season: u8) -> Option<ChronTeam> {
         }
         let bytes = res.unwrap().bytes().unwrap();
         if !Path::new("json").exists() {
-            fs::create_dir("json");
+            if fs::create_dir("json").is_err() {
+                println!("directory creation error");
+            }
         }
         let data = serde_json::from_slice(&bytes);
-        fs::write(path, bytes);
+        if data.is_ok() {
+            if fs::write(path, bytes).is_err() {
+                println!("write error");
+            }
+        } //this looks stupid but it has to to compile
         if data.is_err() {
             println!("json error: {}", data.unwrap_err());
             return None;
@@ -234,10 +252,16 @@ pub fn player(id: Uuid, season: u8) -> Option<ChronPlayer> {
         }
         let bytes = res.unwrap().bytes().unwrap();
         if !Path::new("json").exists() {
-            fs::create_dir("json");
+            if fs::create_dir("json").is_err() {
+                println!("directory creation error");
+            }
         }
         let data = serde_json::from_slice(&bytes);
-        fs::write(path, bytes);
+        if data.is_ok() {
+            if fs::write(path, bytes).is_err() {
+                println!("write error");
+            }
+        } //this looks stupid but it has to to compile
         if data.is_err() {
             println!("json error: {}", data.unwrap_err());
             return None;
@@ -263,6 +287,7 @@ impl ChronArray<ChronDivision> {
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(non_snake_case)]
 pub struct ChronItem<D> {
     validFrom: String, //todo: these are timestamps
     validTo: Option<String>,
@@ -279,6 +304,7 @@ pub struct ChronDivision {
 pub type ChronHall = Vec<ChronTribute>;
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(non_snake_case)]
 pub struct ChronTribute {
     pub peanuts: u64,
     pub playerId: Uuid,
@@ -291,6 +317,7 @@ pub struct ChronFate {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(non_snake_case)]
 pub struct ChronTeam {
     pub id: Uuid,
     pub fullName: String,
@@ -359,6 +386,7 @@ fn modconvert(mods: &[Vec<String>]) -> Mods {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[allow(non_snake_case)]
 pub struct ChronPlayer {
     pub id: Uuid,
     pub name: String,
