@@ -64,9 +64,11 @@ fn main() {
     
     let mut fate_vec: Vec<Uuid> = tiebreakers(11).unwrap();
     let mut fate_pool: Vec<usize> = (0..20).collect();
+    let mut fates: Vec<usize> = Vec::new();
     for i in 0..20 {
         let fate_roll = if prefill { fate_vec.iter().position(|&id| id == divisions[i]).unwrap() } else { fate_pool[rng.index(20 - i)] };
         world.team_mut(divisions[i]).fate = fate_roll;
+        fates.push(fate_roll);
         //println!("{} {}", world.team(teams[i]).name, world.team(teams[i]).fate);
         if !prefill { fate_pool.retain(|&j| j != fate_roll) };
     }
@@ -110,16 +112,21 @@ fn main() {
             if day % 9 == 8 {
                 sim.world.clear_weekly();
             }
+            
+            let mut party_standings: Vec<i16> = Vec::new();
+            for &t in divisions.iter() {
+                let team = sim.world.team(t);
+                party_standings.push(team.losses);
+            }
+            postseason::update_party(&divisions, &party_standings, &fates, day, sim.world, sim.rng);
         }
 
         //do standings and fates need to be a vec actually
         let mut standings: Vec<i16> = Vec::new();
-        let mut fates: Vec<usize> = Vec::new();
         
         for &t in divisions.iter() {
             let team = sim.world.team(t);
             standings.push(team.wins);
-            fates.push(team.fate);
             println!("{}: {}-{}", team.name, team.wins, team.losses);
         }
 
@@ -175,7 +182,7 @@ fn main() {
         });
 
         let mut div_days = 0;
-        while true {
+        loop {
             let mut games_active: Vec<Game> = postseason::generate_divisional(&playoff_seeds1, &playoff_seeds2, div_days, sim.world, sim.rng);
             if games_active.len() == 0 {
                 break;
@@ -218,7 +225,7 @@ fn main() {
         });
    
         let mut champ_days = 0;
-        while true {
+        loop {
             let mut games_active: Vec<Game> = postseason::generate_championship(&playoff_seeds1, &playoff_seeds2, champ_days, sim.world, sim.rng);
             if games_active.len() == 0 {
                 break;
@@ -303,6 +310,9 @@ fn main() {
         println!("Internet Series: {} {}-{} {}", sim.world.team(playoff_seeds1[0]).name, sim.world.team(playoff_seeds1[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).name);
     
         sim.world.clear_season();
+        for &team in divisions.iter() {
+            sim.world.team_mut(team).partying = false;
+        }
     } else {
         //todo: id by name function
         /*let id = sim.world.gen_player(sim.rng, divisions[6]);

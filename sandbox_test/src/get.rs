@@ -351,7 +351,8 @@ impl ChronTeam {
             losses: 0,
             postseason_wins: 0,
             postseason_losses: 0,
-            fate: 0, //todo: fate is assigned later each season. retrieve it from chron instead
+            partying: false,
+            fate: 0,
 
             mods: modconvert(&[self.permAttr, self.seasAttr, self.weekAttr, self.gameAttr])
         }

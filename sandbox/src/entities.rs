@@ -109,6 +109,7 @@ impl World {
             losses: 0,
             postseason_wins: 0,
             postseason_losses: 0,
+            partying: false,
             fate: 100,
             mods: Mods::new(),
         };
@@ -153,7 +154,7 @@ impl World {
     pub fn random_hall_player(&self, rng: &mut Rng) -> Uuid {
         let index = rng.index(self.hall.len());
         self.hall[index]
-    }   
+    }
 
     pub fn clear_game(&mut self) {
         for (_, player) in self.players.iter_mut() {
@@ -447,6 +448,7 @@ pub struct Team {
     pub losses: i16,
     pub postseason_wins: i16,
     pub postseason_losses: i16,
+    pub partying: bool,
     pub fate: usize,
 
     pub mods: Mods,
