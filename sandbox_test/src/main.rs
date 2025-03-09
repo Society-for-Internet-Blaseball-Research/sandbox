@@ -139,6 +139,10 @@ fn main() {
             println!("{}", sim.world.team(*team).name);
         }
 
+        for &team in divisions.iter() {
+            sim.world.team_mut(team).partying = false;
+        }
+
         let mut wc_days = 0;
         //todo: make this a method with sim either as instance or parameter
         loop {
@@ -310,9 +314,6 @@ fn main() {
         println!("Internet Series: {} {}-{} {}", sim.world.team(playoff_seeds1[0]).name, sim.world.team(playoff_seeds1[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).postseason_wins, sim.world.team(playoff_seeds2[0]).name);
     
         sim.world.clear_season();
-        for &team in divisions.iter() {
-            sim.world.team_mut(team).partying = false;
-        }
     } else {
         //todo: id by name function
         /*let id = sim.world.gen_player(sim.rng, divisions[6]);

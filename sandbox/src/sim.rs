@@ -25,6 +25,7 @@ impl<'a> Sim<'a> {
                 Box::new(InningEventPlugin),
                 Box::new(BatterStatePlugin),
                 Box::new(WeatherPlugin),
+                Box::new(PartyPlugin),
                 Box::new(ModPlugin),
                 Box::new(StealingPlugin),
                 Box::new(BasePlugin),
@@ -628,14 +629,14 @@ impl Plugin for WeatherPlugin {
                     let target1 = target1_opt.unwrap();
                     let target2 = target2_opt.unwrap();
                     if world.player(target1).mods.has(Mod::Soundproof) {
-                        let decreases = roll_random_boosts(rng, -0.05);
+                        let decreases = roll_random_boosts(rng, 0.0, -0.05, true);
                         Some(Event::Soundproof {
                             resists: target1,
                             tangled: target2,
                             decreases
                         })
                     } else if world.player(target2).mods.has(Mod::Soundproof) {
-                        let decreases = roll_random_boosts(rng, -0.05);
+                        let decreases = roll_random_boosts(rng, 0.0, -0.05, true);
                         Some(Event::Soundproof {
                             resists: target2,
                             tangled: target1,
@@ -828,7 +829,7 @@ impl Plugin for WeatherPlugin {
                     let shadows = if batter { &world.team(game.scoreboard.batting_team().id).shadows } else { &world.team(game.scoreboard.pitching_team().id).shadows };
                     let replacement_idx = (rng.next() * shadows.len() as f64).floor() as usize;
                     let replacement = shadows[replacement_idx as usize];
-                    let boosts = roll_random_boosts(rng, 0.2);
+                    let boosts = roll_random_boosts(rng, 0.0, 0.2, false);
                     Some(Event::NightShift { batter, replacement, replacement_idx, boosts })
                 } else {
                     None
@@ -838,10 +839,12 @@ impl Plugin for WeatherPlugin {
     }
 }
 
-fn roll_random_boosts(rng: &mut Rng, threshold: f64) -> Vec<f64> {
+fn roll_random_boosts(rng: &mut Rng, base: f64, threshold: f64, exclude_press: bool) -> Vec<f64> {
     let mut boosts: Vec<f64> = Vec::new();
-    for _ in 0..26 {
-        boosts.push(rng.next() * threshold);
+    //does Tangled decrease press or cinn???
+    let stat_number = if exclude_press { 25 } else { 26 };
+    for _ in 0..stat_number {
+        boosts.push(base + rng.next() * threshold);
     }
     boosts
 }
@@ -980,6 +983,33 @@ impl Plugin for PregamePlugin {
             //other performing code here
             if !activated("Performing") && (overperforming.len() > 0 || underperforming.len() > 0) {
                 Some(Event::Performing { overperforming, underperforming })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+struct PartyPlugin;
+impl Plugin for PartyPlugin {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        let party_roll = rng.next();
+        let party_threshold = if world.season_ruleset < 20 { 0.055 } else { 0.0525 };
+        if party_roll < party_threshold {
+            let party_team = if rng.next() < 0.5 { world.team(game.scoreboard.home_team.id) } else { world.team(game.scoreboard.away_team.id) };
+            if party_team.partying {
+                let lineup_length = party_team.lineup.len();
+                let rotation_length = party_team.rotation.len();
+                let index = rng.index(lineup_length + rotation_length);
+                let target = if index < lineup_length { //guessing
+                    party_team.lineup[index]
+                } else {
+                    party_team.rotation[index - lineup_length]
+                };
+                let boosts = roll_random_boosts(rng, 0.01, 0.04, true);
+                Some(Event::Party { target, boosts })
             } else {
                 None
             }

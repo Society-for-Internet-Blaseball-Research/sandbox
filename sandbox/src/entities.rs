@@ -363,7 +363,7 @@ impl Player {
         0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
     }
     pub fn boost(&mut self, boosts: &Vec<f64>) {
-        //todo: use the enum
+        //todo: implement custom boost order
         self.buoyancy += boosts[0];
         self.divinity += boosts[1];
         self.martyrdom += boosts[2];
@@ -391,9 +391,13 @@ impl Player {
         self.omniscience += boosts[21];
         self.tenaciousness += boosts[22];
         self.watchfulness += boosts[23];
-                
-        self.pressurization += boosts[24];
-        self.cinnamon += boosts[25];
+        
+        if boosts.len() == 25 {
+            self.cinnamon += boosts[24];
+        } else {
+            self.pressurization += boosts[24];
+            self.cinnamon += boosts[25];
+        }
     }
     pub fn add_legendary_item(&mut self, item: LegendaryItem) {
         if let LegendaryItem::NightVisionGoggles = item {

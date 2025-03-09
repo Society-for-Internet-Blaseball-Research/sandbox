@@ -52,6 +52,10 @@ pub enum Event {
         runner: Uuid,
         base_from: u8,
     },
+    Party {
+        target: Uuid,
+        boosts: Vec<f64>
+    },
     Incineration {
         target: Uuid,
         replacement: Player,
@@ -161,7 +165,7 @@ pub enum Event {
     TripleThreatDeactivation {
         home: bool,
         away: bool,
-    }
+    },
 }
 
 impl Event {
@@ -328,6 +332,12 @@ impl Event {
             } => {
                 game.runners.remove(base_from);
                 game.outs += 1;
+            },
+            Event::Party {
+                target,
+                ref boosts
+            } => {
+                world.player_mut(target).boost(boosts);
             },
             Event::Incineration { target, ref replacement, chain } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
