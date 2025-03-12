@@ -61,7 +61,8 @@ pub enum Mod {
     #[strum(serialize="COFFEE_RALLY")]
     FreeRefill,
     TripleThreat,
-    Perk
+    Perk,
+    Elsewhere
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -26,6 +26,7 @@ impl<'a> Sim<'a> {
                 Box::new(BatterStatePlugin),
                 Box::new(WeatherPlugin),
                 Box::new(PartyPlugin),
+                Box::new(FloodingPlugin),
                 Box::new(ModPlugin),
                 Box::new(StealingPlugin),
                 Box::new(BasePlugin),
@@ -375,6 +376,8 @@ impl Plugin for BatterStatePlugin {
             let batter = team.lineup[idx % team.lineup.len()].clone();
             if world.player(batter).mods.has(Mod::Shelled) {
                 return Some(Event::Shelled { batter });
+            } else if world.player(batter).mods.has(Mod::Elsewhere) {
+                return Some(Event::Elsewhere { batter });
             } else if world.player(batter).mods.has(Mod::Haunted) && rng.next() < 0.2 {
                 let inhabit = world.random_hall_player(rng);
                 return Some(Event::Inhabiting { batter, inhabit });
@@ -814,6 +817,7 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::Coffee3 => None,
+            Weather::Flooding => None,
             Weather::Salmon => None,
             Weather::PolarityPlus | Weather::PolarityMinus => {
                 if rng.next() < 0.035 - 0.025 * fort {
@@ -1013,6 +1017,32 @@ impl Plugin for PartyPlugin {
             } else {
                 None
             }
+        } else {
+            None
+        }
+    }
+}
+
+struct FloodingPlugin;
+impl Plugin for FloodingPlugin {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        let fort = 0.0;
+        let flooding_threshold = match world.season_ruleset {
+            11..14 => 0.019 - 0.02 * fort,
+            14..17 => 0.013 - 0.012 * fort,
+            17 => 0.015 - 0.012 * fort,
+            18..24 => 0.016 - 0.012 * fort,
+            _ => 0.0,
+        };
+        if rng.next() < flooding_threshold {
+            let mut elsewhere: Vec<Uuid> = Vec::new();
+            for runner in game.runners.iter() {
+                //todo: flooding threshold depends on myst and fort
+                if rng.next() < 0.1 {
+                    elsewhere.push(runner.id);
+                }
+            }
+            Some(Event::Swept { elsewhere })
         } else {
             None
         }

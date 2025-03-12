@@ -177,4 +177,8 @@ impl Baserunners {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Baserunner> {
         self.runners.iter_mut()
     }
+
+    pub fn clear(&mut self) {
+        self.runners = Vec::new();
+    }
 }

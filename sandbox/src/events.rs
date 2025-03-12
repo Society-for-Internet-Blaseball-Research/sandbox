@@ -166,6 +166,12 @@ pub enum Event {
         home: bool,
         away: bool,
     },
+    Swept {
+        elsewhere: Vec<Uuid>
+    },
+    Elsewhere {
+        batter: Uuid
+    }
 }
 
 impl Event {
@@ -581,7 +587,7 @@ impl Event {
                 bt.batter_index -= 1;
                 bt.batter = Some(batter);
             }
-            Event::Shelled { batter: _batter } => {
+            Event::Shelled { batter: _batter } | Event::Elsewhere { batter: _batter } => {
                 let bt = game.scoreboard.batting_team_mut();
                 bt.batter_index += 1;
                 if !game.started { game.started = true };
@@ -704,7 +710,13 @@ impl Event {
             Event::TripleThreatDeactivation { home, away } => {
                 if home { world.player_mut(game.scoreboard.home_team.pitcher).mods.remove(Mod::TripleThreat); }
                 if away { world.player_mut(game.scoreboard.away_team.pitcher).mods.remove(Mod::TripleThreat); }
-            }
+            },
+            Event::Swept { ref elsewhere } => {
+                game.runners.clear();
+                for &runner in elsewhere {
+                    world.player_mut(runner).mods.add(Mod::Elsewhere, ModLifetime::Permanent);
+                }
+            },
         }
     }
 

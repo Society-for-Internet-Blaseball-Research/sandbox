@@ -27,6 +27,7 @@ pub enum Weather {
     Coffee,
     Coffee2,
     Coffee3,
+    Flooding,
     Salmon,
     //Glitter
     PolarityPlus,
@@ -61,7 +62,7 @@ impl Weather {
             Weather::Coffee2,
             Weather::Coffee3,
             //Weather::Glitter,
-            //Weather::Flooding,
+            Weather::Flooding,
             Weather::Salmon,
             Weather::PolarityPlus,
             Weather::SunPointOne,
