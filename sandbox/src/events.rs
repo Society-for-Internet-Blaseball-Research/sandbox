@@ -171,6 +171,10 @@ pub enum Event {
     },
     Elsewhere {
         batter: Uuid
+    },
+    ElsewhereReturn {
+        returned: Vec<Uuid>,
+        letters: Vec<u8>
     }
 }
 
@@ -714,9 +718,30 @@ impl Event {
             Event::Swept { ref elsewhere } => {
                 game.runners.clear();
                 for &runner in elsewhere {
+                    println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
+                    println!("Swept Elsewhere: {}", world.player(runner).name);
+                    println!("Team: {}", world.team(world.player(runner).team.unwrap()).name);
                     world.player_mut(runner).mods.add(Mod::Elsewhere, ModLifetime::Permanent);
+                    world.player_mut(runner).swept_on = Some(game.day);
                 }
             },
+            Event::ElsewhereReturn { ref returned, ref letters } => {
+                for &player in returned {
+                    println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
+                    println!("Returned: {} after {} days", world.player(player).name, game.day - world.player(player).swept_on.unwrap());
+                    println!("Team: {}", world.team(world.player(player).team.unwrap()).name);
+                    world.player_mut(player).mods.remove(Mod::Elsewhere);
+                    world.player_mut(player).swept_on = None;
+                }
+                for i in 0..letters.len() {
+                    let player = returned[i];
+                    println!("Scattered: {}, {} letters", world.player(player).name, letters[i]);
+                    if letters[i] > 0 {
+                        world.player_mut(player).mods.add(Mod::Scattered, ModLifetime::Permanent);
+                        world.player_mut(player).scattered_letters = letters[i];
+                    }
+                }
+            }
         }
     }
 

@@ -39,14 +39,20 @@ pub enum Weather {
 }
 
 impl Weather {
-    pub fn generate(rng: &mut Rng, season_ruleset: u8) -> Weather {
+    pub fn generate(rng: &mut Rng, season_ruleset: u8, day: usize) -> Weather {
         //todo: actually implement this
         let weights = match season_ruleset {
-            11 => [50, 20, 20, 35, 20, 20, 20, 50, 2, 2, 1], //todo: idk this just feels wrong
+            11 => {
+                if day < 72 {
+                    vec![50, 20, 20, 35, 20, 20, 20, 50, 2, 2, 1] //todo: idk this just feels wrong
+                } else {
+                    vec![50, 20, 20, 35, 20, 20, 20, 50, 2, 2, 1, 200]
+                }
+            },
             _ => todo!(),
         };
         let weight_sum = match season_ruleset {
-            11 => 240,
+            11 => if day < 72 { 240 } else { 440 },
             _ => todo!(),
         };
         let weathers = [
@@ -145,7 +151,7 @@ impl Game {
     pub fn new(team_a: Uuid, team_b: Uuid, day: usize, weather_override: Option<Weather>, world: &World, rng: &mut Rng) -> Game {
         Game {
             id: Uuid::new_v4(),
-            weather: if weather_override.is_some() { weather_override.unwrap() } else { Weather::generate(rng, world.season_ruleset) },
+            weather: if weather_override.is_some() { weather_override.unwrap() } else { Weather::generate(rng, world.season_ruleset, day) },
             day,
             inning: 1,
             balls: 0,

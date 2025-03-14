@@ -320,7 +320,7 @@ fn main() {
         println!("{}", id);
         sim.world.player_mut(id).team = None;
         sim.world.hall.push(id);*/
-        let mut game = Game::new(divisions[18], divisions[6], 0, Some(Weather::Eclipse), sim.world, sim.rng); 
+        let mut game = Game::new(divisions[6], divisions[9], 0, Some(Weather::Flooding), sim.world, sim.rng); 
         println!("{} at {}, {:?}",
             sim.world.team(game.scoreboard.away_team.id).name,
             sim.world.team(game.scoreboard.home_team.id).name,

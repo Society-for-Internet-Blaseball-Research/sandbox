@@ -62,7 +62,8 @@ pub enum Mod {
     FreeRefill,
     TripleThreat,
     Perk,
-    Elsewhere
+    Elsewhere,
+    Scattered
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

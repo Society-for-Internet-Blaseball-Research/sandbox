@@ -25,6 +25,7 @@ impl<'a> Sim<'a> {
                 Box::new(InningEventPlugin),
                 Box::new(BatterStatePlugin),
                 Box::new(WeatherPlugin),
+                Box::new(ElsewherePlugin),
                 Box::new(PartyPlugin),
                 Box::new(FloodingPlugin),
                 Box::new(ModPlugin),
@@ -1026,23 +1027,85 @@ impl Plugin for PartyPlugin {
 struct FloodingPlugin;
 impl Plugin for FloodingPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
-        let fort = 0.0;
-        let flooding_threshold = match world.season_ruleset {
-            11..14 => 0.019 - 0.02 * fort,
-            14..17 => 0.013 - 0.012 * fort,
-            17 => 0.015 - 0.012 * fort,
-            18..24 => 0.016 - 0.012 * fort,
-            _ => 0.0,
-        };
-        if rng.next() < flooding_threshold {
-            let mut elsewhere: Vec<Uuid> = Vec::new();
-            for runner in game.runners.iter() {
-                //todo: flooding threshold depends on myst and fort
-                if rng.next() < 0.1 {
-                    elsewhere.push(runner.id);
+        if let Weather::Flooding = game.weather {
+            let fort = 0.0;
+            let flooding_threshold = match world.season_ruleset {
+                11..14 => 0.019 - 0.02 * fort,
+                14..17 => 0.013 - 0.012 * fort,
+                17 => 0.015 - 0.012 * fort,
+                18..24 => 0.016 - 0.012 * fort,
+                _ => 0.0,
+            };
+            if rng.next() < flooding_threshold {
+                let mut elsewhere: Vec<Uuid> = Vec::new();
+                for runner in game.runners.iter() {
+                    //todo: flooding threshold depends on myst and fort
+                    if rng.next() < 0.1 {
+                        elsewhere.push(runner.id);
+                    }
                 }
+                Some(Event::Swept { elsewhere })
+            } else {
+                None
             }
-            Some(Event::Swept { elsewhere })
+        } else {
+            None
+        }
+    }
+}
+
+struct ElsewherePlugin;
+impl Plugin for ElsewherePlugin {
+    fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        let elsewhere_return_threshold = match world.season_ruleset {
+            11 => 0.001,
+            12 => 0.000575,
+            13..18 => 0.0004,
+            18..24 => 0.00035,
+            _ => 0.0
+        };
+        let mut returned = Vec::new(); //ugh
+        let mut letters = Vec::new();
+        for &player in &world.team(game.scoreboard.batting_team().id).lineup {
+            if world.player(player).mods.has(Mod::Elsewhere) && rng.next() < elsewhere_return_threshold {
+                returned.push(player);
+                let scattered = world.player(player);
+                let time_elsewhere = game.day - scattered.swept_on.unwrap();
+                let mut player_letters = 0u8;
+                if time_elsewhere > 18 {
+                    for i in 0..(scattered.name.len() - 1) {
+                        //todo: we don't know how it works, do we?
+                        rng.next();
+                        //theory
+                        if rng.next() < (time_elsewhere as f64) / 100.0 {
+                            player_letters += 1;
+                        }
+                    }
+                }
+                letters.push(player_letters);
+            }
+        }
+        for &player in &world.team(game.scoreboard.batting_team().id).rotation {
+            if world.player(player).mods.has(Mod::Elsewhere) && rng.next() < elsewhere_return_threshold {
+                returned.push(player);
+                let scattered = world.player(player);
+                let time_elsewhere = game.day - scattered.swept_on.unwrap();
+                let mut player_letters = 0u8;
+                if time_elsewhere > 18 {
+                    for i in 0..(scattered.name.len() - 1) {
+                        //todo: we don't know how it works, do we?
+                        rng.next();
+                        //theory
+                        if rng.next() < (time_elsewhere as f64) / 100.0 {
+                            player_letters += 1;
+                        }
+                    }
+                }
+                letters.push(player_letters);
+            }
+        }
+        if returned.len() > 0 {
+            Some(Event::ElsewhereReturn { returned, letters })
         } else {
             None
         }

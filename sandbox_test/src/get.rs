@@ -441,6 +441,8 @@ impl ChronPlayer {
             team: self.leagueTeamId,
 
             feed: Events::new(),
+            swept_on: None,
+            scattered_letters: 0,
 
             buoyancy: self.buoyancy,
             divinity: self.divinity,

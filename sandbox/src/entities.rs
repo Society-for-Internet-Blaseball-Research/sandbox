@@ -278,6 +278,8 @@ pub struct Player {
     pub team: Option<Uuid>, //ig
     
     pub feed: Events,
+    pub swept_on: Option<usize>,
+    pub scattered_letters: u8,
 
     // stats??
     // todo: maybe represent stats with an array
@@ -326,6 +328,8 @@ impl Player {
             team: None,
 
             feed: Events::new(),
+            swept_on: None,
+            scattered_letters: 0,
 
             // NOW it's rng order compatible
             thwackability: rng.next(),
@@ -357,10 +361,14 @@ impl Player {
         }
     }
     pub fn vibes(&self, day: usize) -> f64 {
-        let frequency = 6.0 + (10.0 * self.buoyancy).round();
-        // todo: sin table? do we care that much?
-        let sin_phase = (PI * ((2.0 / frequency) * (day as f64) + 0.5)).sin();
-        0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
+        if self.scattered_letters > 0 {
+            0.0
+        } else {
+            let frequency = 6.0 + (10.0 * self.buoyancy).round();
+            // todo: sin table? do we care that much?
+            let sin_phase = (PI * ((2.0 / frequency) * (day as f64) + 0.5)).sin();
+            0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
+        }
     }
     pub fn boost(&mut self, boosts: &Vec<f64>) {
         //todo: implement custom boost order
