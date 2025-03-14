@@ -52,7 +52,9 @@ impl Weather {
             _ => todo!(),
         };
         let weight_sum = match season_ruleset {
-            11 => if day < 72 { 240 } else { 440 },
+            11 => {
+                if day < 72 { 240 } else { 440 }
+            }
             _ => todo!(),
         };
         let weathers = [

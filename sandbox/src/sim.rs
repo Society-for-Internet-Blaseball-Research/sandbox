@@ -1064,9 +1064,11 @@ impl Plugin for ElsewherePlugin {
             18..24 => 0.00035,
             _ => 0.0
         };
+        let lineup = &world.team(game.scoreboard.batting_team().id).lineup;
+        let rotation = &world.team(game.scoreboard.batting_team().id).rotation;
         let mut returned = Vec::new(); //ugh
         let mut letters = Vec::new();
-        for &player in &world.team(game.scoreboard.batting_team().id).lineup {
+        for &player in lineup {
             if world.player(player).mods.has(Mod::Elsewhere) && rng.next() < elsewhere_return_threshold {
                 returned.push(player);
                 let scattered = world.player(player);
@@ -1085,7 +1087,7 @@ impl Plugin for ElsewherePlugin {
                 letters.push(player_letters);
             }
         }
-        for &player in &world.team(game.scoreboard.batting_team().id).rotation {
+        for &player in rotation {
             if world.player(player).mods.has(Mod::Elsewhere) && rng.next() < elsewhere_return_threshold {
                 returned.push(player);
                 let scattered = world.player(player);
@@ -1104,10 +1106,35 @@ impl Plugin for ElsewherePlugin {
                 letters.push(player_letters);
             }
         }
-        if returned.len() > 0 {
+        //that last part is to stop it from rolling twice
+        if returned.len() > 0 && game.events.last() != "ElsewhereReturn" {
             Some(Event::ElsewhereReturn { returned, letters })
         } else {
-            None
+            let unscatter_threshold = match world.season_ruleset {
+                11 | 12 => 0.00061,
+                13 => 0.0005,
+                14..17 => 0.0004,
+                17..20 => 0.00042,
+                20 | 21 => 0.000485,
+                22 | 23 => 0.000495,
+                _ => 0.0
+            };
+            let mut unscattered = Vec::new();
+            for &player in lineup {
+                if world.player(player).mods.has(Mod::Scattered) && rng.next() < unscatter_threshold {
+                    unscattered.push(player);
+                }
+            }
+            for &player in rotation {
+                if world.player(player).mods.has(Mod::Scattered) && rng.next() < unscatter_threshold {
+                    unscattered.push(player);
+                }
+            }
+            if unscattered.len() > 0 && game.events.last() != "Unscattered" {
+                Some(Event::Unscatter { unscattered })
+            } else {
+                None
+            }
         }
     }
 }

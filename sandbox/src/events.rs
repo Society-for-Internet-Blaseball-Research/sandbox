@@ -175,6 +175,9 @@ pub enum Event {
     ElsewhereReturn {
         returned: Vec<Uuid>,
         letters: Vec<u8>
+    },
+    Unscatter {
+        unscattered: Vec<Uuid>,
     }
 }
 
@@ -739,6 +742,15 @@ impl Event {
                     if letters[i] > 0 {
                         world.player_mut(player).mods.add(Mod::Scattered, ModLifetime::Permanent);
                         world.player_mut(player).scattered_letters = letters[i];
+                    }
+                }
+            }
+            Event::Unscatter { ref unscattered } => {
+                for &player in unscattered {
+                    world.player_mut(player).scattered_letters -= 1;
+                    if world.player_mut(player).scattered_letters == 0 {
+                        println!("removed scattered from {}", world.player_mut(player).name);
+                        world.player_mut(player).mods.remove(Mod::Scattered);
                     }
                 }
             }
