@@ -1001,7 +1001,7 @@ struct PartyPlugin;
 impl Plugin for PartyPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
         let party_roll = rng.next();
-        let party_threshold = if world.season_ruleset < 20 { 0.055 } else { 0.0525 };
+        let party_threshold = if world.season_ruleset < 20 { 0.0055 } else { 0.00525 };
         if party_roll < party_threshold {
             let party_team = if rng.next() < 0.5 { world.team(game.scoreboard.home_team.id) } else { world.team(game.scoreboard.away_team.id) };
             if party_team.partying {
@@ -1013,7 +1013,8 @@ impl Plugin for PartyPlugin {
                 } else {
                     party_team.rotation[index - lineup_length]
                 };
-                let boosts = roll_random_boosts(rng, 0.01, 0.04, true);
+                let party_number = if world.player(target).mods.has(Mod::LifeOfTheParty) { 0.048 } else { 0.04 };
+                let boosts = roll_random_boosts(rng, party_number, party_number, true);
                 Some(Event::Party { target, boosts })
             } else {
                 None

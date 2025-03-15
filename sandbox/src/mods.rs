@@ -12,6 +12,8 @@ pub enum Mod {
     Fireproof,
     Soundproof,
     Shelled,
+    #[strum(serialize="LIFE_OF_PARTY")]
+    LifeOfTheParty,
     Gravity,
     NightVision,
     FourthStrike,
