@@ -1,16 +1,25 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use strum::EnumString;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString)]
 // todo: repr u16 for compactness?
+#[strum(serialize_all="SCREAMING_SNAKE_CASE")]
 pub enum Mod {
     TargetedShame,
     Flinch,
+    #[strum(serialize="WILD")]
+    Mild,
     Reverberating,
     Fireproof,
     Soundproof,
     Shelled,
+    #[strum(serialize="LIFE_OF_PARTY")]
+    LifeOfTheParty,
     Gravity,
     NightVision,
     FourthStrike,
+    #[strum(serialize="DEBT_THREE")]
     DebtU,
+    #[strum(serialize="MARKED")]
     Unstable,
     Superallergic,
     Spicy,
@@ -27,9 +36,36 @@ pub enum Mod {
     Growth,
     ConsolidatedDebt,
     Repeating,
+    #[strum(serialize="EXTRA_BASE")]
     FifthBase,
+    #[strum(serialize="LOVE")]
     Charm,
-    SuperFlickering //not bothering to type the actual mod name correctly
+    #[strum(serialize="FLIICKERRRIIING")]
+    SuperFlickering, //not bothering to type the actual mod name correctly
+    Squiddish,
+    Siphon,
+    FriendOfCrows,
+    FireEater,
+    Magmatic,
+    HoneyRoasted,
+    Traveling,
+    Haunted,
+    Sealant,
+    Blaserunning,
+    BirdSeed,
+    Superyummy,
+    Overperforming,
+    Underperforming,
+    WalkInThePark,
+    ONo,
+    Wired,
+    Tired,
+    #[strum(serialize="COFFEE_RALLY")]
+    FreeRefill,
+    TripleThreat,
+    Perk,
+    Elsewhere,
+    Scattered
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

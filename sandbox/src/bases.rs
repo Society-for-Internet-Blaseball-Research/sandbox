@@ -101,7 +101,7 @@ impl Baserunners {
         }
     }
 
-    pub fn advance_if(&mut self, mut f: impl FnMut(&Baserunner) -> bool) {
+    pub fn advance_if(&mut self, f: impl Fn(&Baserunner) -> bool) {
         for i in 0..self.runners.len() {
             if self.can_advance(self.runners[i].base) {
                 if f(&self.runners[i]) {
@@ -111,7 +111,7 @@ impl Baserunners {
         }
     }
 
-    pub fn forced_advance_if(&mut self, mut f: impl FnMut(&Baserunner) -> bool) {
+    pub fn forced_advance_if(&mut self, f: impl Fn(&Baserunner) -> bool) {
         if self.occupied(0) && self.occupied(1) && (self.base_number == 4 || self.occupied(2)) {
             for runner in self.runners.iter_mut() {
                 runner.base += 1;
@@ -135,6 +135,10 @@ impl Baserunners {
 
     pub fn empty(&self) -> bool {
         self.runners.len() == 0
+    }
+
+    pub fn len(&self) -> usize {
+        self.runners.len()
     }
 
     pub fn pick_runner(&self, roll: f64) -> u8 {
@@ -172,5 +176,9 @@ impl Baserunners {
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Baserunner> {
         self.runners.iter_mut()
+    }
+
+    pub fn clear(&mut self) {
+        self.runners = Vec::new();
     }
 }

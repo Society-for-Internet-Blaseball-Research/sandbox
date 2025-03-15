@@ -8,14 +8,18 @@ pub struct World {
     pub players: BTreeMap<Uuid, Player>,
     pub teams: BTreeMap<Uuid, Team>,
     pub stadiums: BTreeMap<Uuid, Stadium>,
+    pub hall: Vec<Uuid>, //think of this as a view into a section of players
+    pub season_ruleset: u8,
 }
 
 impl World {
-    pub fn new() -> World {
+    pub fn new(season_ruleset: u8) -> World {
         World {
             players: BTreeMap::new(),
             teams: BTreeMap::new(),
             stadiums: BTreeMap::new(),
+            hall: Vec::new(),
+            season_ruleset
         }
     }
     pub fn player(&self, id: Uuid) -> &Player {
@@ -26,12 +30,30 @@ impl World {
         self.teams.get(&id).unwrap()
     }
 
+    pub fn team_name(&self, name: String) -> &Team {
+        for (_, team) in self.teams.iter() {
+            if *team.name == name {
+                return team;
+            }
+        }
+        panic!("team name not found");
+    }
+
     pub fn player_mut(&mut self, id: Uuid) -> &mut Player {
         self.players.get_mut(&id).unwrap()
     }
 
     pub fn team_mut(&mut self, id: Uuid) -> &mut Team {
         self.teams.get_mut(&id).unwrap()
+    }
+
+    pub fn team_name_mut(&mut self, name: String) -> &mut Team {
+        for (_, team) in self.teams.iter_mut() {
+            if *team.name == name {
+                return team;
+            }
+        }
+        panic!("team name not found");
     }
 
     pub fn insert_player(&mut self, player: Player) {
@@ -46,6 +68,7 @@ impl World {
         let player = self.player_mut(player_id);
         let team_id = player.team.unwrap();
         player.team = None;
+        self.hall.push(player_id);
         let team = self.team_mut(team_id);
         team.replace_player(player_id, new_player_id);
     }
@@ -63,6 +86,16 @@ impl World {
         team2.replace_player(player2_id, player1_id);
     }
 
+    pub fn swap_hall(&mut self, player1_id: Uuid, player2_id: Uuid) {
+        let team_id_1 = self.player(player1_id).team.unwrap();
+        let player1 = self.player_mut(player1_id);
+        player1.team = None;
+        let player2 = self.player_mut(player2_id);
+        player2.team = Some(team_id_1);
+        let team1 = self.team_mut(team_id_1);
+        team1.replace_player(player1_id, player2_id);
+    }
+
     pub fn gen_team(&mut self, rng: &mut Rng, name: String, emoji: String) -> Uuid {
         let id = Uuid::new_v4();
         let mut team = Team {
@@ -76,6 +109,7 @@ impl World {
             losses: 0,
             postseason_wins: 0,
             postseason_losses: 0,
+            partying: false,
             fate: 100,
             mods: Mods::new(),
         };
@@ -96,11 +130,14 @@ impl World {
         id
     }
 
-    //CLONED UUIDS
     pub fn gen_player(&mut self, rng: &mut Rng, team: Uuid) -> Uuid {
+        let interview_rolls = 6 + 2; //soul, allergy, fate, ritual, blood, coffee + names
         let mut player = Player::new(rng);
         let id = player.id;
         player.name = format!("Player {}", &(player.id).to_string()[..8]);
+        for _ in 0..interview_rolls {
+            rng.next(); //to make the rng align
+        }
         player.team = Some(team.clone());
         self.insert_player(player);
         id
@@ -112,6 +149,29 @@ impl World {
         player.team = Some(team.clone());
         self.insert_player(player);
         id
+    }
+
+    pub fn random_hall_player(&self, rng: &mut Rng) -> Uuid {
+        let index = rng.index(self.hall.len());
+        self.hall[index]
+    }
+
+    pub fn clear_game(&mut self) {
+        for (_, player) in self.players.iter_mut() {
+            player.mods.clear_game();
+        }
+    }
+    
+    pub fn clear_weekly(&mut self) {
+        for (_, player) in self.players.iter_mut() {
+            player.mods.clear_weekly();
+        }
+    }
+
+    pub fn clear_season(&mut self) {
+        for (_, player) in self.players.iter_mut() {
+            player.mods.clear_season();
+        }
     }
 }
 
@@ -175,6 +235,9 @@ pub enum PlayerAttr {
 }
 
 impl PlayerAttr {
+    pub fn discr(&self) -> u8 {
+        *self as u8
+    }
     pub fn is_batting(&self) -> bool {
         let discr = *self as u8;
         discr < 8
@@ -215,6 +278,8 @@ pub struct Player {
     pub team: Option<Uuid>, //ig
     
     pub feed: Events,
+    pub swept_on: Option<usize>,
+    pub scattered_letters: u8,
 
     // stats??
     // todo: maybe represent stats with an array
@@ -263,44 +328,50 @@ impl Player {
             team: None,
 
             feed: Events::new(),
+            swept_on: None,
+            scattered_letters: 0,
 
-            // this is not rng order compatible
-            buoyancy: rng.next(),
-            divinity: rng.next(),
-            martyrdom: rng.next(),
+            // NOW it's rng order compatible
+            thwackability: rng.next(),
             moxie: rng.next(),
+            divinity: rng.next(),
             musclitude: rng.next(),
             patheticism: rng.next(),
-            thwackability: rng.next(),
+            buoyancy: rng.next(),
+            base_thirst: rng.next(),
+            laserlikeness: rng.next(),
+            ground_friction: rng.next(),
+            continuation: rng.next(),
+            indulgence: rng.next(),
+            martyrdom: rng.next(),
             tragicness: rng.next(),
-            coldness: rng.next(),
-            overpowerment: rng.next(),
-            ruthlessness: rng.next(),
             shakespearianism: rng.next(),
             suppression: rng.next(),
             unthwackability: rng.next(),
-            base_thirst: rng.next(),
-            continuation: rng.next(),
-            ground_friction: rng.next(),
-            indulgence: rng.next(),
-            laserlikeness: rng.next(),
-            anticapitalism: rng.next(),
-            chasiness: rng.next(),
+            coldness: rng.next(),
+            overpowerment: rng.next(),
+            ruthlessness: rng.next(),
             omniscience: rng.next(),
             tenaciousness: rng.next(),
             watchfulness: rng.next(),
+            anticapitalism: rng.next(),
+            chasiness: rng.next(),
             pressurization: rng.next(),
             cinnamon: rng.next(),
         }
     }
     pub fn vibes(&self, day: usize) -> f64 {
-        let frequency = 6.0 + (10.0 * self.buoyancy).round();
-        // todo: sin table? do we care that much?
-        let sin_phase = (PI * ((2.0 / frequency) * (day as f64) + 0.5)).sin();
-        0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
+        if self.scattered_letters > 0 {
+            0.0
+        } else {
+            let frequency = 6.0 + (10.0 * self.buoyancy).round();
+            // todo: sin table? do we care that much?
+            let sin_phase = (PI * ((2.0 / frequency) * (day as f64) + 0.5)).sin();
+            0.5 * ((sin_phase - 1.0) * self.pressurization + (sin_phase + 1.0) * self.cinnamon)
+        }
     }
     pub fn boost(&mut self, boosts: &Vec<f64>) {
-        //todo: use the enum
+        //todo: implement custom boost order
         self.buoyancy += boosts[0];
         self.divinity += boosts[1];
         self.martyrdom += boosts[2];
@@ -328,21 +399,36 @@ impl Player {
         self.omniscience += boosts[21];
         self.tenaciousness += boosts[22];
         self.watchfulness += boosts[23];
-                
-        self.pressurization += boosts[24];
-        self.cinnamon += boosts[25];
+        
+        if boosts.len() == 25 {
+            self.cinnamon += boosts[24];
+        } else {
+            self.pressurization += boosts[24];
+            self.cinnamon += boosts[25];
+        }
     }
     pub fn add_legendary_item(&mut self, item: LegendaryItem) {
         if let LegendaryItem::NightVisionGoggles = item {
             self.mods.add(Mod::NightVision, ModLifetime::LegendaryItem);
         } else if let LegendaryItem::TheIffeyJr = item {
             self.mods.add(Mod::Minimized, ModLifetime::LegendaryItem);
+        } else if let LegendaryItem::ActualAirplane = item {
+            self.mods.add(Mod::Blaserunning, ModLifetime::LegendaryItem);
         }
         self.legendary_item = Some(item);
     }
     pub fn remove_legendary_item(&mut self) {
         self.mods.clear_legendary_item();
         self.legendary_item = None;
+    }
+    pub fn get_run_value(&self) -> f64 {
+        if self.mods.has(Mod::Wired) {
+            0.5
+        } else if self.mods.has(Mod::Tired) {
+            -0.5
+        } else {
+            0.0
+        }
     }
 }
 
@@ -356,7 +442,8 @@ pub enum LegendaryItem {
     Mushroom,
     NightVisionGoggles,
     ShrinkRay,
-    TheIffeyJr
+    TheIffeyJr,
+    ActualAirplane
 }
 
 #[derive(Clone, Debug)]
@@ -373,6 +460,7 @@ pub struct Team {
     pub losses: i16,
     pub postseason_wins: i16,
     pub postseason_losses: i16,
+    pub partying: bool,
     pub fate: usize,
 
     pub mods: Mods,
@@ -482,7 +570,6 @@ impl Team {
         reverb_changes
     }
 
-    //CLONED UUIDS
     pub fn apply_reverb_changes(&mut self, reverb_type: u8, changes: &Vec<usize>) {
         let mut result: Vec<Uuid> = Vec::new();
         let lineup_length = self.lineup.len();

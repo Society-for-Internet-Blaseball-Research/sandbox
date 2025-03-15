@@ -6,69 +6,102 @@ use crate::{MultiplierData, Weather};
 //however the sim in its current state operates with DE assumptions.
 //This is fixed with season rulesets
 
-pub fn strike_threshold(pitcher: &Player, batter: &Player, flinch: bool, multiplier_data: &MultiplierData) -> f64 {
+pub fn strike_threshold(pitcher: &Player, batter: &Player, flinch: bool, season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
     let fwd = 0.5; // todo: ballparks
-    let ruth = coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day)); // todo: vibes
-
+    let ruth = coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+    let vibeless_musc = coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.musclitude);
+                                                                                                                                                                                  
     let constant = if flinch { 0.4 } else { 0.2 };
-    (constant + 0.285 * ruth + 0.2 * fwd + 0.1 * coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, batter.musclitude)).min(0.86)
+    match season_ruleset {
+        11 => (constant + 0.35 * ruth + 0.2 * fwd + 0.1 * vibeless_musc).min(0.9),
+        12 | 13 => (constant + 0.3 * ruth + 0.2 * fwd + 0.1 * vibeless_musc).min(0.85),  
+        14 => (constant + 0.285 * ruth + 0.2 * fwd + 0.1 * vibeless_musc).min(0.86),
+        15..24 => todo!(),
+        _ => panic!("wrong season number")
+    }
 }
 
-pub fn swing_threshold(pitcher: &Player, batter: &Player, is_strike: bool, multiplier_data: &MultiplierData) -> f64 {
+pub fn swing_threshold(pitcher: &Player, batter: &Player, is_strike: bool, season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
     let visc = 0.5;
     if is_strike {
-        let combined_batting = (coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, batter.divinity) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
-            + coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, batter.musclitude) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
-            + (1.0 - coeff(PlayerAttr::Patheticism, &batter.legendary_item, &batter.mods, multiplier_data, batter.patheticism)) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
-            + coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, batter.thwackability)) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+        let combined_batting = (coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.divinity) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+            + coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.musclitude) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+            + (1.0 - coeff(PlayerAttr::Patheticism, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.patheticism)) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+            + coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.thwackability)) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
             / 4.0;
-        0.7 + 0.35 * combined_batting - 0.4 * coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day)) + 0.2 * (visc - 0.5)
+        let ruth = coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+        let batter_hype = 0.0;
+        let pitcher_hype = 0.0;
+        match season_ruleset {
+            //todo: difference between resim formula and resim notebook
+            11..18 => 0.7 + 0.35 * combined_batting - 0.4 * ruth + 0.2 * (visc - 0.5),
+            18 => 0.6 + 0.35 * combined_batting - 0.2 * ruth + 0.2 * (visc - 0.5),
+            19..23 => 0.6 + 0.35 * combined_batting + 0.04 * batter_hype - 0.2 * ruth - 0.03125 * pitcher_hype + 0.2 * (visc - 0.5), //todo: incomplete formula
+            _ => 0.0
+        }
     } else {
-        let combined = (12.0 * coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day))
-            - 5.0 * coeff(PlayerAttr::Moxie, &batter.legendary_item, &batter.mods, multiplier_data, batter.moxie) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
-            + 5.0 * coeff(PlayerAttr::Patheticism, &batter.legendary_item, &batter.mods, multiplier_data, batter.patheticism)
+        let combined = if season_ruleset < 18 {
+            (12.0 * coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day))
+            - 5.0 * coeff(PlayerAttr::Moxie, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.moxie) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+            + 5.0 * coeff(PlayerAttr::Patheticism, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.patheticism)
             + 4.0 * visc)
-            / 20.0;
+            / 20.0
+        } else {
+            0.375 * (coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day))).powf(0.25)
+            + 0.2 * visc
+            - 0.25 * coeff(PlayerAttr::Moxie, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.moxie) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+            + 0.25 * coeff(PlayerAttr::Patheticism, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.patheticism) //todo: incomplete formula
+        };
         (combined.powf(1.5)).min(0.95).max(0.1)
     }
 }
 
-pub fn contact_threshold(pitcher: &Player, batter: &Player, is_strike: bool, multiplier_data: &MultiplierData) -> f64 {
+pub fn contact_threshold(pitcher: &Player, batter: &Player, is_strike: bool, season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
     let fort = 0.5 - 0.5;
     let visc = 0.5 - 0.5;
     let fwd = 0.5 - 0.5;
 
-    let ruth = coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+    let ruth = coeff(PlayerAttr::Ruthlessness, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.ruthlessness) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
 
     let ballpark_sum = (fort + 3.0 * visc - 6.0 * fwd) / 10.0;
 
     if is_strike {
         let combined_batting =
-            (coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, batter.divinity)
-            + coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, batter.musclitude)
-            + coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, batter.thwackability)
-            - coeff(PlayerAttr::Patheticism, &batter.legendary_item, &batter.mods, multiplier_data, batter.patheticism))
+            (coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.divinity)
+            + coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.musclitude)
+            + coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.thwackability)
+            - coeff(PlayerAttr::Patheticism, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.patheticism))
             / 2.0
             * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
 
-        (0.78 - 0.08 * ruth + 0.16 * ballpark_sum + 0.17 * combined_batting.powf(1.2)).min(0.925)
+        match season_ruleset {
+            11..14 => (0.8 - 0.08 * ruth + 0.16 * ballpark_sum + 0.16 * combined_batting.powf(1.2)).min(0.9),
+            14 => (0.78 - 0.08 * ruth + 0.16 * ballpark_sum + 0.17 * combined_batting.powf(1.2)).min(0.925),
+            15..23 => todo!(), //"we don't know" - Astrid
+            _ => 0.0
+        }
     } else {
-        (0.4 - 0.1 * ruth + 0.35 * (((1.0 - batter.patheticism * multiplier(PlayerAttr::Patheticism, &batter.mods, multiplier_data)) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))).min(0.0).powf(1.5)) + 0.14 * ballpark_sum)
-            .min(1.0)
+        let inv_path = 1.0 - batter.patheticism * multiplier(PlayerAttr::Patheticism, &batter.mods, multiplier_data, true) * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
+        match season_ruleset {
+            11..14 => (0.35 - 0.1 * ruth + 0.4 * inv_path.max(0.0).powf(1.5) + 0.14 * ballpark_sum).min(1.0),
+            14 => (0.4 - 0.1 * ruth + 0.35 * inv_path.max(0.0).powf(1.5) + 0.14 * ballpark_sum).min(1.0),
+            15..23 => todo!(),
+            _ => 0.0
+        }
     }
 }
 
-pub fn foul_threshold(_pitcher: &Player, batter: &Player, multiplier_data: &MultiplierData) -> f64 {
+pub fn foul_threshold(_pitcher: &Player, batter: &Player, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
     let fwd = 0.5;
     let obt = 0.5;
-    let batter_sum = (coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, batter.musclitude) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
-        + coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, batter.thwackability) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
-        + coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, batter.divinity)) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+    let batter_sum = (coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.musclitude) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+        + coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.thwackability) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
+        + coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.divinity)) * (1.0 + 0.2 * batter.vibes(multiplier_data.day))
         / 3.0;
-    0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum
+    0.25 + 0.1 * fwd - 0.1 * obt + 0.1 * batter_sum //consistent across all seasons
 }
 
-pub fn out_threshold(pitcher: &Player, batter: &Player, defender: &Player, multiplier_data: &MultiplierData) -> f64 {
+pub fn out_threshold(pitcher: &Player, batter: &Player, defender: &Player, season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
     let grand_center = 0.0;
     let obt_center = 0.0;
     let omi_center = 0.0;
@@ -76,31 +109,56 @@ pub fn out_threshold(pitcher: &Player, batter: &Player, defender: &Player, multi
     let visc_center = 0.0;
     let fwd_center = 0.0;
 
-    let thwack = coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, batter.thwackability) * (1.0 + 0.2 * batter.vibes(multiplier_data.day)); // all with vibes
-    let unthwack = coeff(PlayerAttr::Unthwackability, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.unthwackability) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
-    let omni = coeff(PlayerAttr::Omniscience, &defender.legendary_item, &defender.mods, multiplier_data, defender.omniscience) * (1.0 + 0.2 * defender.vibes(multiplier_data.day));
+    let thwack = coeff(PlayerAttr::Thwackability, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.thwackability) * (1.0 + 0.2 * batter.vibes(multiplier_data.day)); // all with vibes
+    let unthwack = coeff(PlayerAttr::Unthwackability, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.unthwackability) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+    let omni = coeff(PlayerAttr::Omniscience, &defender.legendary_item, &defender.mods, multiplier_data, false, defender.omniscience) * (1.0 + 0.2 * defender.vibes(multiplier_data.day));
 
-    0.3115 + 0.1 * thwack - 0.08 * unthwack - 0.065 * omni
-        + 0.01 * grand_center
-        + 0.0085 * obt_center
-        - 0.0033 * omi_center
-        - 0.0015 * incon_center
-        - 0.0033 * visc_center
-        + 0.01 * fwd_center
+    match season_ruleset { 
+        11 | 12 => {
+            0.315 + 0.1 * thwack - 0.08 * unthwack - 0.07 * omni
+            + 0.0145 * grand_center
+            + 0.0085 * omi_center
+            - 0.011 * incon_center
+            - 0.005 * visc_center
+            + 0.01 * fwd_center
+        },
+        13 => {
+            0.3115 + 0.1 * thwack - 0.08 * unthwack - 0.065 * omni
+            + 0.01 * grand_center
+            + 0.0085 * obt_center
+            - 0.0033 * omi_center
+            - 0.002 * incon_center
+            - 0.0033 * visc_center
+            + 0.01 * fwd_center
+        },
+        14..18 => {
+            let bp_sum = (55.0 * grand_center
+                + 51.0 * fwd_center
+                + 40.0 * obt_center
+                - 17.0 * visc_center
+                - 17.0 * omi_center
+                - 10.0 * incon_center
+            ) / 100.0;
+            0.311 + 0.1 * thwack - 0.08 * unthwack - 0.064 * omni + 0.02 * bp_sum
+        },
+        18..24 => todo!(),
+        _ => 0.0
+    }
 }
 
-pub fn fly_threshold(batter: &Player, multiplier_data: &MultiplierData) -> f64 {
+pub fn fly_threshold(batter: &Player, _pitcher: &Player, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
     let omi_center = 0.0;
-    let buoy = coeff(PlayerAttr::Buoyancy, &batter.legendary_item, &batter.mods, multiplier_data, batter.buoyancy); //no vibes
-    let supp = coeff(PlayerAttr::Suppression, &batter.legendary_item, &batter.mods, multiplier_data, batter.suppression); //this is tgb's doing; team should still be the pitching team
+    let buoy = coeff(PlayerAttr::Buoyancy, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.buoyancy); //no vibes
+    let supp = coeff(PlayerAttr::Suppression, &batter.legendary_item, &batter.mods, multiplier_data, false, batter.suppression); //this is tgb's doing; team should still be the pitching team
 
-    0.18 + 0.3 * buoy - 0.16 * supp - 0.1 * omi_center
+    //consistent across all seasons
+    (0.18 + 0.3 * buoy - 0.16 * supp - 0.1 * omi_center).max(0.01) //todo: hype
 }
 
-pub fn hr_threshold(pitcher: &Player, batter: &Player, multiplier_data: &MultiplierData) -> f64 {
-    let div = coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, batter.divinity) * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
-    let opw = coeff(PlayerAttr::Overpowerment, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.overpowerment) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
-    let supp = coeff(PlayerAttr::Suppression, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.suppression) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+pub fn hr_threshold(pitcher: &Player, batter: &Player, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let div = coeff(PlayerAttr::Divinity, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.divinity) * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
+    let opw = coeff(PlayerAttr::Overpowerment, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.overpowerment) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+    let supp = coeff(PlayerAttr::Suppression, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.suppression) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
 
     let grand_center = 0.0;
     let fort_center = 0.0;
@@ -114,45 +172,50 @@ pub fn hr_threshold(pitcher: &Player, batter: &Player, multiplier_data: &Multipl
 
     let opw_supp = (10.0 * opw + 1.0 * supp) / 11.0;
 
-    0.12 + 0.16 * div - 0.08 * opw_supp - 0.18 * ballpark_sum
+    0.12 + 0.16 * div - 0.08 * opw_supp - 0.18 * ballpark_sum //consistent across all seasons
 }
 
-pub fn quadruple_threshold(_pitcher: &Player, _batter: &Player, _fielder: &Player, _multiplier_data: &MultiplierData) -> f64 {
+pub fn quadruple_threshold(_pitcher: &Player, _batter: &Player, _fielder: &Player, _season_ruleset: u8, _multiplier_data: &MultiplierData) -> f64 {
     //todo
     0.015
 }
 
-pub fn triple_threshold(pitcher: &Player, batter: &Player, fielder: &Player, multiplier_data: &MultiplierData) -> f64 {
-    let gf = coeff(PlayerAttr::GroundFriction, &batter.legendary_item, &batter.mods, multiplier_data, batter.ground_friction) * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
-    let opw = coeff(PlayerAttr::Overpowerment, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.overpowerment) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
-    let chase = coeff(PlayerAttr::Chasiness, &fielder.legendary_item, &fielder.mods, multiplier_data, fielder.chasiness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
+pub fn triple_threshold(pitcher: &Player, batter: &Player, fielder: &Player, season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let gf = coeff(PlayerAttr::GroundFriction, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.ground_friction) * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
+    let opw = coeff(PlayerAttr::Overpowerment, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.overpowerment) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+    let chase = coeff(PlayerAttr::Chasiness, &fielder.legendary_item, &fielder.mods, multiplier_data, false, fielder.chasiness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
     let fwd_center = 0.0;
     let grand_center = 0.0;
     let obt_center = 0.0;
     let omi_center = 0.0;
     let visc_center = 0.0;
+    let bp_sum = (3.0 * fwd_center + 5.0 * grand_center + 5.0 * obt_center - omi_center - visc_center) / 15.0;
 
-    0.045 + 0.2 * gf - 0.04 * opw - 0.05 * chase
-        + 0.02 * fwd_center
-        + 0.034 * grand_center
-        + 0.034 * obt_center
-        - 0.0065 * omi_center
-        - 0.0065 * visc_center
+    match season_ruleset {
+        11 | 12 => 0.05 + 0.2 * gf - 0.04 * opw - 0.06 * chase + 0.1 * bp_sum,
+        13..18 => 0.045 + 0.2 * gf - 0.04 * opw - 0.05 * chase + 0.1 * bp_sum,
+        18..24 => todo!(),
+        _ => 0.0
+    }
 }
 
-pub fn double_threshold(pitcher: &Player, batter: &Player, fielder: &Player, multiplier_data: &MultiplierData) -> f64 {
-    let musc = coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, batter.musclitude) * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
-    let opw = coeff(PlayerAttr::Overpowerment, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.overpowerment) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
-    let chase = coeff(PlayerAttr::Chasiness, &fielder.legendary_item, &fielder.mods, multiplier_data, fielder.chasiness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
+pub fn double_threshold(pitcher: &Player, batter: &Player, fielder: &Player, season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let musc = coeff(PlayerAttr::Musclitude, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.musclitude) * (1.0 + 0.2 * batter.vibes(multiplier_data.day));
+    let opw = coeff(PlayerAttr::Overpowerment, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.overpowerment) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+    let chase = coeff(PlayerAttr::Chasiness, &fielder.legendary_item, &fielder.mods, multiplier_data, false, fielder.chasiness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
     let fwd_center = 0.0;
     let elong_center = 0.0;
     let omi_center = 0.0;
     let visc_center = 0.0;
+    let bp_sum = 0.027 * fwd_center - 0.015 * elong_center - 0.01 * omi_center - 0.008 * visc_center;
 
-    0.165 + 0.2 * musc - 0.04 * opw - 0.009 * chase + 0.027 * fwd_center
-        - 0.015 * elong_center
-        - 0.01 * omi_center
-        - 0.008 * visc_center
+    match season_ruleset {
+        11 | 12 => 0.17 + 0.2 * musc - 0.04 * opw - 0.1 * chase + bp_sum,
+        13 => 0.165 + 0.2 * musc - 0.04 * opw - 0.09 * chase + bp_sum,
+        14..18 => 0.16 + 0.2 * musc - 0.04 * opw - 0.08 * chase + bp_sum,
+        18..24 => todo!(),
+        _ => 0.0
+    }
 }
 
 pub fn steal_attempt_threshold(_runner: &Player, _defender: &Player) -> f64 {
@@ -164,39 +227,41 @@ pub fn steal_success_threshold(_runner: &Player, _defender: &Player) -> f64 {
     0.8
 }
 
-pub fn hit_advancement_threshold(runner: &Player, fielder: &Player, multiplier_data: &MultiplierData) -> f64 {
-    let tenac = coeff(PlayerAttr::Tenaciousness, &fielder.legendary_item, &fielder.mods, multiplier_data, fielder.tenaciousness); //no vibes???
-    let cont = coeff(PlayerAttr::Continuation, &runner.legendary_item, &runner.mods, multiplier_data, runner.continuation);
+//all out formulas are consistent across all seasons. probably
+
+pub fn hit_advancement_threshold(runner: &Player, fielder: &Player, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let tenac = coeff(PlayerAttr::Tenaciousness, &fielder.legendary_item, &fielder.mods, multiplier_data, false, fielder.tenaciousness); //no vibes???
+    let cont = coeff(PlayerAttr::Continuation, &runner.legendary_item, &runner.mods, multiplier_data, true, runner.continuation);
 
     (0.7 - tenac + 0.6 * cont).min(0.95).max(0.01)
 }
 
-pub fn groundout_sacrifice_threshold(batter: &Player, multiplier_data: &MultiplierData) -> f64 {
-    let mart = coeff(PlayerAttr::Martyrdom, &batter.legendary_item, &batter.mods, multiplier_data, batter.martyrdom);
+pub fn groundout_sacrifice_threshold(batter: &Player, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let mart = coeff(PlayerAttr::Martyrdom, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.martyrdom);
 
     0.05 + 0.25 * mart
 }
 
-pub fn groundout_advancement_threshold(runner: &Player, fielder: &Player, multiplier_data: &MultiplierData) -> f64 {
-    let indulg = coeff(PlayerAttr::Indulgence, &runner.legendary_item, &runner.mods, multiplier_data, runner.indulgence) * (1.0 + 0.2 * runner.vibes(multiplier_data.day));
-    let tenac = coeff(PlayerAttr::Tenaciousness, &fielder.legendary_item, &fielder.mods, multiplier_data, fielder.tenaciousness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
+pub fn groundout_advancement_threshold(runner: &Player, fielder: &Player, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let indulg = coeff(PlayerAttr::Indulgence, &runner.legendary_item, &runner.mods, multiplier_data, true, runner.indulgence) * (1.0 + 0.2 * runner.vibes(multiplier_data.day));
+    let tenac = coeff(PlayerAttr::Tenaciousness, &fielder.legendary_item, &fielder.mods, multiplier_data, false, fielder.tenaciousness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
     let incon = 0.5;
     let elong = 0.5;
 
-    0.5 + 0.35 * indulg - 0.15 * tenac - 0.15 * (incon - 0.5) - 0.15 * (elong - 0.5)
+    0.5 + 0.35 * indulg - 0.15 * tenac - 0.15 * (incon - 0.5) - 0.15 * (elong - 0.5) //todo: batter debt cursedness
 }
 
-pub fn double_play_threshold(batter: &Player, pitcher: &Player, fielder: &Player, multiplier_data: &MultiplierData) -> f64 {
-    let shakes = coeff(PlayerAttr::Shakespearianism, &pitcher.legendary_item, &pitcher.mods, multiplier_data, pitcher.shakespearianism) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
-    let trag = coeff(PlayerAttr::Tragicness, &batter.legendary_item, &batter.mods, multiplier_data, batter.tragicness);
-    let tenac = coeff(PlayerAttr::Tenaciousness, &fielder.legendary_item, &fielder.mods, multiplier_data, fielder.tenaciousness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
+pub fn double_play_threshold(batter: &Player, pitcher: &Player, fielder: &Player, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let shakes = coeff(PlayerAttr::Shakespearianism, &pitcher.legendary_item, &pitcher.mods, multiplier_data, false, pitcher.shakespearianism) * (1.0 + 0.2 * pitcher.vibes(multiplier_data.day));
+    let trag = coeff(PlayerAttr::Tragicness, &batter.legendary_item, &batter.mods, multiplier_data, true, batter.tragicness);
+    let tenac = coeff(PlayerAttr::Tenaciousness, &fielder.legendary_item, &fielder.mods, multiplier_data, false, fielder.tenaciousness) * (1.0 + 0.2 * fielder.vibes(multiplier_data.day));
     let elong = 0.5;
 
     (-0.05 + 0.4 * shakes - 0.18 * (1.0 - trag) + 0.1 * tenac - 0.16 * (elong - 0.5)).max(0.001)
 }
 
-pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_data: &MultiplierData) -> f64 {
-    let indulg = coeff(PlayerAttr::Indulgence, &runner.legendary_item, &runner.mods, multiplier_data, runner.indulgence) * (1.0 + 0.2 * runner.vibes(multiplier_data.day));
+pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, _season_ruleset: u8, multiplier_data: &MultiplierData) -> f64 {
+    let indulg = coeff(PlayerAttr::Indulgence, &runner.legendary_item, &runner.mods, multiplier_data, true, runner.indulgence) * (1.0 + 0.2 * runner.vibes(multiplier_data.day));
     let elong = 0.0;
     let incon = 0.0;
     match base_from {
@@ -218,20 +283,36 @@ pub fn flyout_advancement_threshold(runner: &Player, base_from: u8, multiplier_d
     }
 }
 
-fn coeff(attr: PlayerAttr, legendary_item: &Option<LegendaryItem>, mods: &Mods, multiplier_data: &MultiplierData, stat: f64) -> f64 {
-    let mut item_stat = (stat + item(attr, legendary_item, multiplier_data));
+fn coeff(attr: PlayerAttr, legendary_item: &Option<LegendaryItem>, mods: &Mods, multiplier_data: &MultiplierData, batting_team: bool, stat: f64) -> f64 {
+    let mut item_stat = stat + item(attr, legendary_item);
     if attr.is_negative() {
         item_stat = item_stat.min(0.99);
     } else {
         item_stat = item_stat.max(0.01);
     }
-    item_stat * multiplier(attr, mods, multiplier_data)
+    item_stat * multiplier(attr, mods, multiplier_data, batting_team)
 }
 
-fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
+fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData, batting_team: bool) -> f64 {
+    //note: resim has the position parameter, but afaik it's basically
+    //equivalent to the category of stat (even THAT suppression call)
+    let team_mods = if batting_team { &data.batting_team_mods } else { &data.pitching_team_mods };
     let mut multiplier = 1.0;
-    if mods.has(Mod::Growth) {
+    if mods.has(Mod::Overperforming) {
+        multiplier += 0.2;
+    } else if mods.has(Mod::Underperforming) {
+        multiplier -= 0.2; 
+    } else if team_mods.has(Mod::Growth) {
         multiplier += 0.05f64.min(data.day as f64 / 99.0 * 0.05);
+    } else if team_mods.has(Mod::Traveling) {
+        let away = data.top && attr.is_batting() || !data.top && attr.is_pitching() ;
+        //buoy, path, thwack, cold, ruth
+        if away && !([0, 5, 6, 8, 10].contains(&attr.discr())) {
+            multiplier += 0.05;
+        }
+        if !data.top && attr.is_defense() {
+            multiplier += 0.05;
+        }
     } else if let Weather::Birds = data.weather {
         if mods.has(Mod::AffinityForCrows) && attr.is_pitching() {
             multiplier += 0.5;
@@ -257,7 +338,7 @@ fn multiplier(attr: PlayerAttr, mods: &Mods, data: &MultiplierData) -> f64 {
     }
 }
 
-fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData) -> f64 {
+fn item(attr: PlayerAttr, item: &Option<LegendaryItem>) -> f64 {
     if let Some(item_type) = item {
         match item_type {
             LegendaryItem::DialTone | LegendaryItem::VibeCheck | LegendaryItem::BangersAndSmash => {
@@ -298,7 +379,7 @@ fn item(attr: PlayerAttr, item: &Option<LegendaryItem>, _data: &MultiplierData) 
                     }
                 }
             },
-            LegendaryItem::NightVisionGoggles => {
+            LegendaryItem::NightVisionGoggles | LegendaryItem::ActualAirplane => {
                 return 0.0;
             },
             LegendaryItem::ShrinkRay => {

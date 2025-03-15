@@ -4,51 +4,15 @@ use sandbox::{
     events::Events,
     rng::Rng,
     mods::Mod,
-    Game, GameTeam,
+    Game, GameTeam, Weather
 };
 use uuid::Uuid;
 
-pub fn generate_game(team_a: Uuid, team_b: Uuid, day: usize, rng: &mut Rng, world: &World) -> Game {
-    Game {
-        id: Uuid::new_v4(),
-        weather: sandbox::Weather::generate(rng),
-        day,
-        top: true,
-        inning: 1,
-        home_team: GameTeam {
-            id: team_a,
-            //todo: days
-            pitcher: world.team(team_a).rotation[day % world.team(team_a).rotation.len()],
-            batter: None,
-            batter_index: 0,
-            score: if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 },
-        },
-        away_team: GameTeam {
-            id: team_b,
-            pitcher: world.team(team_b).rotation[day % world.team(team_b).rotation.len()],
-            batter: None,
-            batter_index: 0,
-            score: 0.0,
-        },
-        balls: 0,
-        strikes: 0,
-        outs: 0,
-        polarity: false,
-        scoring_plays_inning: 0,
-        salmon_resets_inning: 0,
-        events: Events::new(),
-        runners: Baserunners::new(if world.team(team_b).mods.has(Mod::FifthBase) { 5 } else { 4 }),
-        linescore_home: vec![if world.team(team_a).mods.has(Mod::HomeFieldAdvantage) { 1.0 } else { 0.0 }],
-        linescore_away: vec![0.0],
-    }
-}
-
 pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> Vec<ScheduleGame> {
     let mut schedule: Vec<ScheduleGame> = Vec::new();
-    let mut series_distr = vec![20, 130, 180]; //interleague, league, division, total
+    let series_distr = vec![20, 130, 180]; //interleague, league, division, total
     for day in 0..days {
         if day % 3 == 0 {
-            println!("{}", day);
             let mut daily_games: Vec<ScheduleGame> = Vec::new(); 
             //every number is an index of the team in divisions
             //debating whether to use this or a regular array with binary search
@@ -65,7 +29,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             }
             //rounding down to even integer and checking for underflow
             interleague_games = (interleague_games / 2 * 2).min(series_distr[0]);
-            println!("{} interleague games", interleague_games);
             for j in 0..interleague_games {
                 let home_team_idx = rng.index(20 - 2 * j);
                 let mut away_team_idx = rng.index(10 - j);
@@ -109,7 +72,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             league2_interdiv_games = (league2_interdiv_games / 2 * 2 + league2_forced_interdiv)
                 .min(remaining_teams[2].len())
                 .min(remaining_teams[3].len());
-            println!("{} league games", league1_interdiv_games + league2_interdiv_games);
             for j in 0..league1_interdiv_games {
                 let mut home_team_idx = rng.index(10 - interleague_games - 2 * j);
                 let mut div1_hosts = true;
@@ -165,13 +127,11 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 orders.retain(|&n| n != order);               
             }
 
-            let div_games = 10 - interleague_games - league1_interdiv_games - league2_interdiv_games;
-            println!("{} division games", div_games);
             for j in 0..4 {
                 if remaining_teams[j].len() % 2 == 1 {
                     panic!("wrong amount of teams playing interleague/interdivision matchups");
                 }
-                for k in 0..(remaining_teams[j].len() / 2) {
+                for _ in 0..(remaining_teams[j].len() / 2) {
                     let home_team_idx = rng.index(remaining_teams[j].len());
                     let mut away_team_idx = rng.index(remaining_teams[j].len() - 1);
                     //avoiding scenario of a team playing itself
@@ -193,7 +153,6 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 }
             }
             if orders.len() > 0 {
-                println!("{}", orders.len());
                 panic!("not enough daily games");
             }
             if daily_games.len() > 10 {
@@ -224,7 +183,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
 }
 
 pub fn generate_games(schedule: Vec<ScheduleGame>, world: &World, rng: &mut Rng) -> Vec<Game> {
-    schedule.iter().map(|sg| generate_game(sg.home_team, sg.away_team, sg.day, rng, world)).collect()
+    schedule.iter().map(|sg| Game::new(sg.home_team, sg.away_team, sg.day, None, world, rng)).collect()
 }
 
 #[derive(Debug, Clone)]
