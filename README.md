@@ -20,5 +20,7 @@ Right now you can download it via `git clone https://github.com/Society-for-Inte
 * sandbox\_test: crate containing components related to interacting with the sandbox crate to simulate multiple games.
     * `main.rs`: The method that runs the simulation. Edit various sections in the code to get different results.
     * `schedule.rs`: Generating a schedule.
+    * `postseason.rs`: Postseason logic.
+    * `get.rs`: Getting players from Chronicler for "real" seasons.
 
 sandbox is the natural consequence of [resim](https://github.com/xSke/resim).
