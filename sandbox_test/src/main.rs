@@ -26,17 +26,19 @@ fn main() {
     
     let mut rng = Rng::new(12933895067857275469, 10184511423779887981); //s12 seed
 
-    //let mut world = World::new(11); //0-indexed season number
-    let mut world = world(11);
+    let mut world = World::new(11); //0-indexed season number
+    //let mut world = world(11);
     //let name_gen = NameGen::new();
-    let mut prefill = true;
+    let mut prefill = false;
 
+    let team_number: usize = 24;
+    let div_size: usize = 6;
     let mut teams: Vec<Uuid> = Vec::new();
-    let team_names: Vec<&str> = include_str!("teams.txt").split(",").collect();
-    let emojis: Vec<&str> = include_str!("emojis.txt").split(" ").collect();
+    let mut team_names: Vec<&str> = include_str!("teams.txt").trim().split(",").collect();
+    let emojis: Vec<&str> = include_str!("emojis.txt").trim().split(" ").collect();
     //todo: dehardcode team number
     if !prefill {
-        for i in 0..20 {
+        for i in 0..team_number {
             teams.push(world.gen_team(&mut rng, team_names[i].to_string(), emojis[i].to_string()));
         }
     }
@@ -46,12 +48,16 @@ fn main() {
         if prefill {
             divisions(11).unwrap().convert()
         } else {
-            vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings",
+            /*vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings",
             "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Unlimited Tacos",
             "Dallas Steaks", "New York Millennials", "Philly Pies", "San Francisco Lovers", "Seattle Garages", 
-            "Canada Moist Talkers", "Charleston Shoe Thieves", "Hawai'i Fridays", "Kansas City Breath Mints", "Yellowstone Magic"]
+            "Canada Moist Talkers", "Charleston Shoe Thieves", "Hawai'i Fridays", "Kansas City Breath Mints", "Yellowstone Magic"]*/
+            vec!["Atlantis Georgias", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings", "Tokyo Lift",
+            "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Ohio Worms", "Unlimited Tacos",
+            "Core Mechanics", "Dallas Steaks", "New York Millennials", "Philly Pies", "San Francisco Lovers", "Seattle Garages", 
+            "Baltimore Crabs", "Canada Moist Talkers", "Charleston Shoe Thieves", "Hawai'i Fridays", "Kansas City Breath Mints", "Yellowstone Magic"]
                 .iter()
-                .map(|s| teams[team_names.binary_search(s).expect("team not found")])
+                .map(|s| teams[team_names.binary_search(s).unwrap_or_else(|_| panic!("team not found: {s}"))])
                 .collect()
         };
 
@@ -62,11 +68,11 @@ fn main() {
     //world.player_mut(world.team(team_a).lineup[0]).add_legendary_item(LegendaryItem::TheIffeyJr);
     //world.player_mut(world.team_name(String::from("Charleston Shoe Thieves")).rotation[0]).mods.add(Mod::Superyummy, ModLifetime::Permanent);
     
-    let mut fate_vec: Vec<Uuid> = tiebreakers(11).unwrap();
-    let mut fate_pool: Vec<usize> = (0..20).collect();
+    let mut fate_vec: Vec<Uuid> = if prefill { tiebreakers(11).unwrap() } else { Vec::new() };
+    let mut fate_pool: Vec<usize> = (0..team_number).collect();
     let mut fates: Vec<usize> = Vec::new();
-    for i in 0..20 {
-        let fate_roll = if prefill { fate_vec.iter().position(|&id| id == divisions[i]).unwrap() } else { fate_pool[rng.index(20 - i)] };
+    for i in 0..team_number {
+        let fate_roll = if prefill { fate_vec.iter().position(|&id| id == divisions[i]).unwrap() } else { fate_pool[rng.index(team_number - i)] };
         world.team_mut(divisions[i]).fate = fate_roll;
         fates.push(fate_roll);
         //println!("{} {}", world.team(teams[i]).name, world.team(teams[i]).fate);
@@ -76,13 +82,14 @@ fn main() {
     let season_mode = true;
     if season_mode {
         let days_in_season = 99;
-        let games = generate_games(generate_schedule(days_in_season, &divisions, sim.rng), sim.world, sim.rng);
+        let game_number = team_number / 2;
+        let games = generate_games(generate_schedule(days_in_season, &divisions, sim.rng, team_number, div_size), sim.world, sim.rng);
         for day in 0..days_in_season {
             let mut games_active: Vec<Game> = Vec::new();
-            for i in (day * 10)..((day + 1) * 10) {
+            for i in (day * game_number)..((day + 1) * game_number) {
                 games_active.push(games[i].clone());
             }
-            for i in 0..10 {
+            for i in 0..game_number {
                 let home_team = sim.world.team(games_active[i].scoreboard.home_team.id);
                 let home_pitcher = home_team.rotation[day % home_team.rotation.len()];
                 games_active[i].scoreboard.home_team.pitcher = if sim.world.player(home_pitcher).mods.has(Mod::Shelled) { home_team.rotation[(day - 1) % home_team.rotation.len()] } else { home_pitcher };
