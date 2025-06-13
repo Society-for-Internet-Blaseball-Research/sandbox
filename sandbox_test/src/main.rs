@@ -26,10 +26,10 @@ fn main() {
     
     let mut rng = Rng::new(12933895067857275469, 10184511423779887981); //s12 seed
 
-    let mut world = World::new(11); //0-indexed season number
-    //let mut world = world(11);
+    //let mut world = World::new(11); //0-indexed season number
+    let mut world = world(11);
     //let name_gen = NameGen::new();
-    let mut prefill = false;
+    let mut prefill = true;
 
     let team_number: usize = 20;
     let div_size: usize = 5;
