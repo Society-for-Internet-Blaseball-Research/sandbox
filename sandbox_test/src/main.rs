@@ -26,17 +26,16 @@ fn main() {
     
     let mut rng = Rng::new(12933895067857275469, 10184511423779887981); //s12 seed
 
-    //let mut world = World::new(11); //0-indexed season number
-    let mut world = world(11);
+    let mut world = World::new(11); //0-indexed season number
+    //let mut world = world(11);
     //let name_gen = NameGen::new();
-    let mut prefill = true;
+    let mut prefill = false;
 
     let team_number: usize = 20;
     let div_size: usize = 5;
     let mut teams: Vec<Uuid> = Vec::new();
     let mut team_names: Vec<&str> = include_str!("teams.txt").trim().split(",").collect();
     let emojis: Vec<&str> = include_str!("emojis.txt").trim().split(" ").collect();
-    //todo: dehardcode team number
     if !prefill {
         for i in 0..team_number {
             teams.push(world.gen_team(&mut rng, team_names[i].to_string(), emojis[i].to_string()));
@@ -59,6 +58,11 @@ fn main() {
                 .iter()
                 .map(|s| teams[team_names.binary_search(s).unwrap_or_else(|_| panic!("team not found: {s}"))])
                 .collect()
+            /*let mut v = Vec::new();
+            for i in 0..12 {
+                v.push(teams[i]);
+            }
+            v*/
         };
 
     //edit mods and legendary items
@@ -79,7 +83,7 @@ fn main() {
         if !prefill { fate_pool.retain(|&j| j != fate_roll) };
     }
     let season_mode = true;
-    let loop_number = 3;
+    let loop_number = 1;
     for i in 0..loop_number {
         let mut og_world = world.clone();
         let mut sim = Sim::new(&mut og_world, &mut rng);

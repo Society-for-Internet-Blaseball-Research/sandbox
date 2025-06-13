@@ -3,8 +3,11 @@ use uuid::Uuid;
 use std::cmp::Ordering;
 
 pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usize>, rng: &mut Rng) -> (Vec<Uuid>, Vec<Uuid>) {
+    let league_size = divisions.len();
+    let div_size = league_size / 4;
+    let subleague_size = league_size / 2;
     //indices of teams in the division Vec
-    let mut indices: Vec<usize> = (0..20).collect();
+    let mut indices: Vec<usize> = (0..league_size).collect();
     
     indices.sort_by(|&a, &b| {
         if let Ordering::Equal = standings[b].cmp(&standings[a]) {
@@ -20,16 +23,16 @@ pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec
     let mut playoff_seeds2: Vec<Uuid> = Vec::new();
     let mut indices_wc: Vec<usize> = indices.clone();
     for &idx in indices.iter() {
-        if idx < 10 {
+        if idx < subleague_size {
             if playoff_seeds1.len() < 4 {
                 playoff_seeds1.push(divisions[idx]);
-                division_playoffs[idx / 5] += 1; //idx / 5 is the index of the division
+                division_playoffs[idx / div_size] += 1; //idx / 5 is the index of the division
                 indices_wc.retain(|&i| i != idx);
             }
         } else {
             if playoff_seeds2.len() < 4 {
                 playoff_seeds2.push(divisions[idx]);
-                division_playoffs[idx / 5] += 1;
+                division_playoffs[idx / div_size] += 1;
                 indices_wc.retain(|&i| i != idx);
             }
         }
@@ -37,7 +40,7 @@ pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec
         for div in 0..4 {
             let oppo = if div % 2 == 0 { div + 1 } else { div - 1 }; //the other division in the league
             if division_playoffs[div] == 0 && division_playoffs[oppo] == 3 {
-                let div_winner_idx = *(indices.iter().find(|&&i| i >= div * 5 && i < (div + 1) * 5).unwrap());
+                let div_winner_idx = *(indices.iter().find(|&&i| i >= div * div_size && i < (div + 1) * div_size).unwrap());
                 if div < 2 {
                     playoff_seeds1.push(divisions[div_winner_idx]);
                 } else {
@@ -51,16 +54,19 @@ pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec
             break;
         }
     }
-    let indices_wc1: Vec<usize> = indices_wc.iter().copied().filter(|&i| i < 10).collect();
-    let indices_wc2: Vec<usize> = indices_wc.iter().copied().filter(|&i| i >= 10).collect();
-    playoff_seeds1.push(divisions[indices_wc1[rng.index(6)]]);
-    playoff_seeds2.push(divisions[indices_wc2[rng.index(6)]]);
+    let indices_wc1: Vec<usize> = indices_wc.iter().copied().filter(|&i| i < subleague_size).collect();
+    let indices_wc2: Vec<usize> = indices_wc.iter().copied().filter(|&i| i >= subleague_size).collect();
+    playoff_seeds1.push(divisions[indices_wc1[rng.index(subleague_size - 4)]]);
+    playoff_seeds2.push(divisions[indices_wc2[rng.index(subleague_size - 4)]]);
     (playoff_seeds1, playoff_seeds2)
 }
 
 pub fn update_party(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usize>, day: usize, world: &mut World, rng: &mut Rng) {
+    let league_size = divisions.len();
+    let div_size = league_size / 4;
+    let subleague_size = league_size / 2;
     //indices of teams in the division Vec
-    let mut indices: Vec<usize> = (0..20).collect();
+    let mut indices: Vec<usize> = (0..league_size).collect();
     
     indices.sort_by(|&a, &b| {
         if let Ordering::Equal = standings[a].cmp(&standings[b]) {
@@ -75,22 +81,22 @@ pub fn update_party(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usi
     let mut playoff_seeds1: Vec<Uuid> = Vec::new();
     let mut playoff_seeds2: Vec<Uuid> = Vec::new();
     for &idx in indices.iter() {
-        if idx < 10 {
+        if idx < subleague_size {
             if playoff_seeds1.len() < 4 {
                 playoff_seeds1.push(divisions[idx]);
-                division_playoffs[idx / 5] += 1; //idx / 5 is the index of the division
+                division_playoffs[idx / div_size] += 1; //idx / 5 is the index of the division
             }
         } else {
             if playoff_seeds2.len() < 4 {
                 playoff_seeds2.push(divisions[idx]);
-                division_playoffs[idx / 5] += 1;
+                division_playoffs[idx / div_size] += 1;
             }
         }
 
         for div in 0..4 {
             let oppo = if div % 2 == 0 { div + 1 } else { div - 1 }; //the other division in the league
             if division_playoffs[div] == 0 && division_playoffs[oppo] == 3 {
-                let div_winner_idx = *(indices.iter().find(|&&i| i >= div * 5 && i < (div + 1) * 5).unwrap());
+                let div_winner_idx = *(indices.iter().find(|&&i| i >= div * div_size && i < (div + 1) * div_size).unwrap());
                 if div < 2 {
                     playoff_seeds1.push(divisions[div_winner_idx]);
                 } else {
@@ -118,11 +124,12 @@ pub fn update_party(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usi
     losses2.sort();
     let max_losses2 = losses2.last().unwrap();
 
-    for i in 0..20 {
+    for i in 0..league_size {
         let team = world.team_mut(divisions[i]);
         //todo: this doesn't include fate...
-        let max_losses = if i < 10 { max_losses1 } else { max_losses2 }; 
-        if (team.losses - max_losses) as i128 > (99 - day) as i128 && !team.partying {
+        let max_losses = if i < subleague_size { max_losses1 } else { max_losses2 }; 
+        if (team.losses - max_losses) as i128 > (99 - day) as i128 && !team.partying { 
+            //todo: i128???
             team.partying = true;
             println!("Partytime: day {}, {}, {} losses, {} max playoff losses", day, team.name, team.losses, max_losses);
         }
