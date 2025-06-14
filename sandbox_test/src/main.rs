@@ -11,12 +11,35 @@ use sandbox::{
     Game, Weather
 };
 use uuid::Uuid;
+use clap::Parser;
 
 mod schedule;
 mod postseason;
 mod get;
 
+#[derive(Debug, Parser)]
+struct Args {
+    #[arg(long, default_value_t=69)]
+    s1: u64,
+    #[arg(long, default_value_t=420)]
+    s2: u64,
+    #[arg(long, action)]
+    prefill: bool,
+    #[arg(long, default_value_t=11)]
+    season: u8,
+    #[arg(long, default_value_t=20)]
+    teams: usize,
+    #[arg(long, default_value_t=5)]
+    divsize: usize,
+    #[arg(long, action)]
+    seasonmode: bool,
+    #[arg(long, default_value_t=1)]
+    loops: usize
+}
+
 fn main() {
+    let args = Args::parse();
+
     //edit seed
     //let mut rng = Rng::new(69, 420);
     //let mut rng = Rng::new(2200200200200200200, 1234567890987654321);
@@ -24,16 +47,21 @@ fn main() {
     //let mut rng = Rng::new(37, 396396396396);
     //let mut rng = Rng::new(1923746321473263448, 2938897239474837483);
     
-    let mut rng = Rng::new(12933895067857275469, 10184511423779887981); //s12 seed
+    //let mut rng = Rng::new(12933895067857275469, 10184511423779887981); //s12 seed
 
-    //let mut world = World::new(11); //0-indexed season number
-    let mut world = world(11);
+    let mut rng = Rng::new(args.s1, args.s2);
     //let name_gen = NameGen::new();
-    let mut prefill = true;
+    let mut prefill = args.prefill;
+    let mut world = if prefill {
+        world(args.season)
+    } else {
+        World::new(args.season)
+    }; //0-indexed season number
 
-    let team_number: usize = 20;
-    let div_size: usize = 5;
+    let team_number: usize = args.teams;
+    let div_size: usize = args.divsize;
     let mut teams: Vec<Uuid> = Vec::new();
+    //todo: those go in args too
     let mut team_names: Vec<&str> = include_str!("teams.txt").trim().split(",").collect();
     let emojis: Vec<&str> = include_str!("emojis.txt").trim().split(" ").collect();
     if !prefill {
@@ -45,7 +73,7 @@ fn main() {
     //IMPORTANT: team names in teams.txt must be sorted alphabetically
     let divisions: Vec<Uuid> = 
         if prefill {
-            divisions(11).unwrap().convert()
+            divisions(args.season).unwrap().convert()
         } else {
             /*vec!["Baltimore Crabs", "Breckenridge Jazz Hands", "Chicago Firefighters", "Hades Tigers", "Mexico City Wild Wings",
             "Boston Flowers", "Hellmouth Sunbeams", "Houston Spies", "Miami Dale", "Unlimited Tacos",
@@ -82,8 +110,8 @@ fn main() {
         //println!("{} {}", world.team(teams[i]).name, world.team(teams[i]).fate);
         if !prefill { fate_pool.retain(|&j| j != fate_roll) };
     }
-    let season_mode = true;
-    let loop_number = 1;
+    let season_mode = args.seasonmode;
+    let loop_number = args.loops;
     for i in 0..loop_number {
         let mut og_world = world.clone();
         let mut sim = Sim::new(&mut og_world, &mut rng);
