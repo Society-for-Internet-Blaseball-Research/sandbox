@@ -8,21 +8,28 @@ use sandbox::{
 };
 use uuid::Uuid;
 
-pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> Vec<ScheduleGame> {
+pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng, league_size: usize, div_size: usize) -> Vec<ScheduleGame> {
     let mut schedule: Vec<ScheduleGame> = Vec::new();
-    let series_distr = vec![20, 130, 180]; //interleague, league, division, total
+    let games_num = league_size / 2;
+    let series_distr = vec![20, 130, 180]; //interleague, league, division
+    let mut team_indices: Vec<Vec<usize>> = Vec::new();
+    for div_num in 0..(league_size / div_size) {
+        let start = div_num * div_size;
+        let end = start + div_size;
+        team_indices.push((start..end).collect());
+    }
     for day in 0..days {
         if day % 3 == 0 {
             let mut daily_games: Vec<ScheduleGame> = Vec::new(); 
             //every number is an index of the team in divisions
             //debating whether to use this or a regular array with binary search
             //although a 2d array is probably needed anyway
-            let mut remaining_teams: Vec<Vec<usize>> = vec![(0..5).collect(), (5..10).collect(), (10..15).collect(), (15..20).collect()];
+            let mut remaining_teams: Vec<Vec<usize>> = team_indices.clone();
             //every possible order of the game in the view
-            let mut orders: Vec<usize> = (0..10).collect();
+            let mut orders: Vec<usize> = (0..games_num).collect();
 
             let mut interleague_games = 0;
-            for _j in 0..10 {
+            for _j in 0..games_num {
                 if rng.index(series_distr[0] + series_distr[1] + series_distr[2]) < series_distr[0] {
                     interleague_games += 1;
                 }
@@ -30,10 +37,11 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             //rounding down to even integer and checking for underflow
             interleague_games = (interleague_games / 2 * 2).min(series_distr[0]);
             for j in 0..interleague_games {
-                let home_team_idx = rng.index(20 - 2 * j);
-                let mut away_team_idx = rng.index(10 - j);
-                if home_team_idx < 10 - j {
-                    away_team_idx += 10 - j;
+                let home_team_idx = rng.index(league_size - 2 * j);
+                let mut away_team_idx = rng.index(games_num - j); //games_num also doubles as
+                                                                  //subleague size
+                if home_team_idx < games_num - j {
+                    away_team_idx += games_num - j;
                 }
                 let flat_teams = remaining_teams.concat();
                 let home_team_num = flat_teams[home_team_idx];
@@ -57,9 +65,9 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             let league2_forced_interdiv = remaining_teams[2].len() % 2;
             let mut league1_interdiv_games = 0;
             let mut league2_interdiv_games = 0;
-            for j in 0..10 {
+            for j in 0..games_num {
                 if rng.index(series_distr[1] + series_distr[2]) < series_distr[1] {
-                    if j < 5 {
+                    if j < div_size {
                         league1_interdiv_games += 1;
                     } else {
                         league2_interdiv_games += 1;
@@ -73,7 +81,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 .min(remaining_teams[2].len())
                 .min(remaining_teams[3].len());
             for j in 0..league1_interdiv_games {
-                let mut home_team_idx = rng.index(10 - interleague_games - 2 * j);
+                let mut home_team_idx = rng.index(games_num - interleague_games - 2 * j);
                 let mut div1_hosts = true;
                 if home_team_idx >= remaining_teams[0].len() {
                     div1_hosts = false;
@@ -100,7 +108,7 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
                 orders.retain(|&n| n != order);
             }
             for j in 0..league2_interdiv_games {
-                let mut home_team_idx = rng.index(10 - interleague_games - 2 * j);
+                let mut home_team_idx = rng.index(games_num - interleague_games - 2 * j);
                 let mut div3_hosts = true;
                 if home_team_idx >= remaining_teams[2].len() {
                     div3_hosts = false;
@@ -155,17 +163,17 @@ pub fn generate_schedule(days: usize,  divisions: &Vec<Uuid>, rng: &mut Rng) -> 
             if orders.len() > 0 {
                 panic!("not enough daily games");
             }
-            if daily_games.len() > 10 {
+            if daily_games.len() > games_num {
                 panic!("too much daily games");
             }
             daily_games.sort_by(|g1, g2| g1.order.cmp(&g2.order));
             schedule.append(&mut daily_games);
         } else {
             let mut daily_games: Vec<ScheduleGame> = Vec::new();
-            for i in ((day - 1) * 10)..(day * 10) {
+            for i in ((day - 1) * games_num)..(day * games_num) {
                 daily_games.push(schedule[i].clone());
             }
-            let mut orders: Vec<usize> = (0..10).collect();
+            let mut orders: Vec<usize> = (0..games_num).collect();
             for game in daily_games.iter_mut() {
                 game.day = day;
                 let order = rng.index(orders.len());

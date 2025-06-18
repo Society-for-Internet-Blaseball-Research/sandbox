@@ -10,7 +10,7 @@ use sandbox::{entities::{Player, Team, World}, mods::{Mods, Mod, ModLifetime}, e
 pub fn world(season: u8) -> World {
     let mut world = World::new(season);
     let divisions = divisions(season).unwrap().convert();
-    for &t in divisions .iter() {
+    for &t in divisions.iter() {
         let team = team(t, season).unwrap().convert();
         world.insert_team(team);
         //there's got to be a better way
@@ -24,9 +24,9 @@ pub fn world(season: u8) -> World {
             world.insert_player(player(p, season).unwrap().convert());
         }
     }
-    for p in hall(season).unwrap() {
-        world.insert_player(player(p.playerId, season).unwrap().convert());
-        world.hall.push(p.playerId);
+    for deceased in hall(season).unwrap() {
+        world.insert_player(player(deceased.playerId, season).unwrap().convert());
+        world.hall.push(deceased.playerId);
     }
     return world;
 }

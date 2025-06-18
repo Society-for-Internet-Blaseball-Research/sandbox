@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::{events::Events, mods::{Mod, ModLifetime, Mods}, rng::Rng};
 
+#[derive(Clone, Debug)]
 pub struct World {
     pub players: BTreeMap<Uuid, Player>,
     pub teams: BTreeMap<Uuid, Team>,
