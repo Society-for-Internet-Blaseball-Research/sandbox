@@ -16,6 +16,7 @@ pub enum Mod {
     LifeOfTheParty,
     Gravity,
     NightVision,
+    #[strum(serialize="EXTRA_STRIKE")]
     FourthStrike,
     #[strum(serialize="DEBT_THREE")]
     DebtU,
@@ -24,6 +25,7 @@ pub enum Mod {
     Superallergic,
     Spicy,
     HeatingUp,
+    #[strum(serialize="ON_FIRE")]
     RedHot,
     Minimized,
     Electric,
@@ -65,7 +67,24 @@ pub enum Mod {
     TripleThreat,
     Perk,
     Elsewhere,
-    Scattered
+    Scattered,
+    #[strum(serialize="OVERUNDER")]
+    OverUnder,
+    #[strum(serialize="UNDEROVER")]
+    UnderOver,
+    #[strum(serialize="SWIM_BLADDER")]
+    Flippers,
+    Earlbirds,
+    #[strum(serialize="LATE_TO_PARTY")]
+    LateToTheParty,
+    #[strum(serialize="WANDERER")]
+    Roaming,
+    HardBoiled,
+    Undersea,
+    BottomDweller,
+    MaintenanceMode,
+    Carcinization,
+    Ambush
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

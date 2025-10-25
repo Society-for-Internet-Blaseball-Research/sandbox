@@ -59,7 +59,8 @@ pub enum Event {
     Incineration {
         target: Uuid,
         replacement: Player,
-        chain: Option<Uuid>
+        chain: Option<Uuid>,
+        ambush: (Option<Uuid>, Option<Uuid>)
     },
     Peanut {
         target: Uuid,
@@ -87,6 +88,7 @@ pub enum Event {
     },
     BlackHole {
         home_team: bool,
+        carcinized: Option<Uuid>,
     },
     Salmon {
         home_runs_lost: bool,
@@ -178,6 +180,24 @@ pub enum Event {
     },
     Unscatter {
         unscattered: Vec<Uuid>,
+    },
+    #[strum(to_string="OverUnder ({on})")]
+    OverUnder {
+        on: bool,
+        players: Vec<Uuid>
+    },
+    #[strum(to_string="UnderOver ({on})")]
+    UnderOver {
+        on: bool,
+        players: Vec<Uuid>
+    },
+    #[strum(to_string="Undersea ({home})")]
+    Undersea {
+        home: bool
+    },
+    #[strum(to_string="MaintenanceMode ({home})")]
+    MaintenanceMode {
+        home: bool
     }
 }
 
@@ -190,6 +210,7 @@ impl Event {
         game.events.add(repr.clone());
         match *self {
             Event::BatterUp { batter } => {
+                //println!("{:?}", world.player(batter).mods);
                 let bt = game.scoreboard.batting_team_mut();
                 bt.batter = Some(batter);
                 if !game.started { game.started = true };
@@ -337,6 +358,7 @@ impl Event {
                     game.scoreboard.batting_team_mut().score += 0.2;
                 }
                 game.runners.advance(base_from);
+                game.score(world);
                 game.base_sweep();
             }
             Event::CaughtStealing {
@@ -352,7 +374,7 @@ impl Event {
             } => {
                 world.player_mut(target).boost(boosts);
             },
-            Event::Incineration { target, ref replacement, chain } => {
+            Event::Incineration { target, ref replacement, chain, ambush } => {
                 println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
                 println!("Incineration: {}", world.player(target).name);
                 println!("Team: {}", world.team(world.player(target).team.unwrap()).name);
@@ -376,6 +398,18 @@ impl Event {
                 } else {
                     world.swap_hall(target, replacement_id);
                 }
+                if ambush.0.is_some() {
+                    let ambush_target = ambush.0.unwrap();
+                    world.hall.retain(|&id| id != ambush_target);
+                    world.team_mut(game.scoreboard.home_team.id).shadows.push(ambush_target);
+                    world.player_mut(ambush_target).team = Some(game.scoreboard.home_team.id);
+                }
+                if ambush.1.is_some() {
+                    let ambush_target = ambush.1.unwrap();
+                    world.hall.retain(|&id| id != ambush_target);
+                    world.team_mut(game.scoreboard.away_team.id).shadows.push(ambush_target);
+                    world.player_mut(ambush_target).team = Some(game.scoreboard.away_team.id);
+                }
                 if chain.is_some() {
                     world.player_mut(chain.unwrap()).mods.add(Mod::Unstable, ModLifetime::Week);
                 }
@@ -392,6 +426,14 @@ impl Event {
                 let boosts: Vec<f64> = vec![coeff; 26];
                 let player = world.player_mut(target);
                 player.boost(&boosts);
+                if !yummy {
+                    let home = world.player(target).team.unwrap() == game.scoreboard.home_team.id;
+                    if home {
+                        game.home_impaired = true;
+                    } else {
+                        game.away_impaired = true;
+                    }
+                }
             },
             Event::Birds => {},
             Event::Feedback { target1, target2 } => {
@@ -506,6 +548,12 @@ impl Event {
                     }
                 }
                 target_mut.boost(&decreases);
+                let home = target_mut.team.unwrap() == game.scoreboard.home_team.id;
+                if home {
+                    game.home_impaired = true;
+                } else {
+                    game.away_impaired = true;
+                }
             },
             //todo: add win manipulation when we actually have wins
             Event::Sun2 { home_team } => {
@@ -525,7 +573,7 @@ impl Event {
                     }
                 }
             }
-            Event::BlackHole { home_team } => {
+            Event::BlackHole { home_team, carcinized } => {
                 if home_team {
                     game.scoreboard.home_team.score -= 10.0;
                     if game.day > 98 {
@@ -533,12 +581,22 @@ impl Event {
                     } else {
                         world.team_mut(game.scoreboard.away_team.id).wins -= 1;
                     }
+                    if carcinized.is_some() {
+                        let carc = carcinized.unwrap();
+                        world.team_mut(game.scoreboard.home_team.id).lineup.push(carc);
+                        world.team_mut(game.scoreboard.away_team.id).lineup.retain(|&b| b != carc);
+                    }
                 } else {
                     game.scoreboard.away_team.score -= 10.0;
                     if game.day > 98 {
                         world.team_mut(game.scoreboard.home_team.id).postseason_wins -= 1;
                     } else {
                         world.team_mut(game.scoreboard.home_team.id).wins -= 1;
+                    }
+                    if carcinized.is_some() {
+                        let carc = carcinized.unwrap();
+                        world.team_mut(game.scoreboard.away_team.id).lineup.push(carc);
+                        world.team_mut(game.scoreboard.home_team.id).lineup.retain(|&b| b != carc);
                     }
                 }
             },
@@ -588,6 +646,12 @@ impl Event {
             Event::Fireproof { target: _target } | Event::IffeyJr { target: _target } => {},
             Event::Soundproof { resists: _resists, tangled, ref decreases } => {
                 world.player_mut(tangled).boost(decreases);
+                let home = world.player(tangled).team.unwrap() == game.scoreboard.home_team.id;
+                if home {
+                    game.home_impaired = true;
+                } else {
+                    game.away_impaired = true;
+                }
             },
             Event::Reverberating { batter } => {
                 let bt = game.scoreboard.batting_team_mut();
@@ -719,6 +783,12 @@ impl Event {
                 if away { world.player_mut(game.scoreboard.away_team.pitcher).mods.remove(Mod::TripleThreat); }
             },
             Event::Swept { ref elsewhere } => {
+                let runners = game.runners.clone();
+                for runner in runners.iter() {
+                    if world.player(runner.id).mods.has(Mod::Flippers) {
+                        game.scoreboard.batting_team_mut().score += world.player(runner.id).get_run_value() + 1.0;
+                    }
+                }
                 game.runners.clear();
                 for &runner in elsewhere {
                     println!("{} at {}, day {}", world.team(game.scoreboard.away_team.id).name, world.team(game.scoreboard.home_team.id).name, game.day);
@@ -753,8 +823,42 @@ impl Event {
                         world.player_mut(player).mods.remove(Mod::Scattered);
                     }
                 }
+            },
+            Event::OverUnder { on, ref players } => {
+                for &p in players.iter() {
+                    if on {
+                        world.player_mut(p).mods.add(Mod::Underperforming, ModLifetime::Game);
+                    } else {
+                        world.player_mut(p).mods.remove(Mod::Underperforming);
+                    }
+                }
+            },
+            Event::UnderOver { on, ref players } => {
+                for &p in players.iter() {
+                    if on {
+                        world.player_mut(p).mods.add(Mod::Overperforming, ModLifetime::Game);
+                    } else {
+                        world.player_mut(p).mods.remove(Mod::Overperforming);
+                    }
+                }
+            },
+            Event::Undersea { home } => {
+                let team = if home {
+                    game.scoreboard.home_team.id
+                } else {
+                    game.scoreboard.away_team.id
+                };
+                world.team_mut(team).mods.add(Mod::Overperforming, ModLifetime::Game);
+            },
+            Event::MaintenanceMode { home } => {
+                if home {
+                    game.scoreboard.home_team.max_outs = 4;
+                } else {
+                    game.scoreboard.away_team.max_outs = 4;
+                };
             }
         }
+        game.update_multiplier_data(world);
     }
 
     //todo: might merge this with a possible future print function
@@ -820,6 +924,17 @@ impl Events {
                 } else {
                     return false;
                 }
+            }
+        }
+        false
+    }
+    pub fn has_before(&self, s: String, other: String) -> bool {
+        let mut half_innings = 0i16;
+        for ev in self.events.iter().rev() {
+            if *ev == s {
+                return true;
+            } else if *ev == other {
+                return false;
             }
         }
         false

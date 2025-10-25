@@ -2,20 +2,10 @@ use sandbox::{entities::World, rng::Rng, Game};
 use uuid::Uuid;
 use std::cmp::Ordering;
 
-pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usize>, rng: &mut Rng) -> (Vec<Uuid>, Vec<Uuid>) {
+pub fn generate_seeding(divisions: &Vec<Uuid>, indices: &Vec<usize>, rng: &mut Rng) -> (Vec<Uuid>, Vec<Uuid>) {
     let league_size = divisions.len();
     let div_size = league_size / 4;
     let subleague_size = league_size / 2;
-    //indices of teams in the division Vec
-    let mut indices: Vec<usize> = (0..league_size).collect();
-    
-    indices.sort_by(|&a, &b| {
-        if let Ordering::Equal = standings[b].cmp(&standings[a]) {
-            fates[a].cmp(&fates[b])
-        } else {
-            standings[b].cmp(&standings[a])
-        }
-    });
     
     //how many playoff teams are in each division
     let mut division_playoffs: [u8; 4] = [0; 4];
@@ -61,20 +51,10 @@ pub fn generate_seeding(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec
     (playoff_seeds1, playoff_seeds2)
 }
 
-pub fn update_party(divisions: &Vec<Uuid>, standings: &Vec<i16>, fates: &Vec<usize>, day: usize, world: &mut World, rng: &mut Rng) {
+pub fn update_party(divisions: &Vec<Uuid>, indices: &Vec<usize>, day: usize, world: &mut World, rng: &mut Rng) {
     let league_size = divisions.len();
     let div_size = league_size / 4;
     let subleague_size = league_size / 2;
-    //indices of teams in the division Vec
-    let mut indices: Vec<usize> = (0..league_size).collect();
-    
-    indices.sort_by(|&a, &b| {
-        if let Ordering::Equal = standings[a].cmp(&standings[b]) {
-            fates[a].cmp(&fates[b])
-        } else {
-            standings[a].cmp(&standings[b])
-        }
-    });
     
     //how many playoff teams are in each division
     let mut division_playoffs: [u8; 4] = [0; 4];

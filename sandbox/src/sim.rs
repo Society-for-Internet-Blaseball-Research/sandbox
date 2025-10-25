@@ -194,7 +194,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
 
     let is_flinching = game.strikes == 0 && batter.mods.has(Mod::Flinch);
 
-    let multiplier_data = &game.compute_multiplier_data(world);
+    let multiplier_data = &game.multiplier_data;
 
     let is_strike = rng.next() < formulas::strike_threshold(pitcher, batter, is_flinching, ruleset, multiplier_data);
     let does_swing = if !is_flinching {
@@ -232,7 +232,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         let is_fly = rng.next() < formulas::fly_threshold(batter, pitcher, ruleset, multiplier_data);
         if is_fly {
             let mut advancing_runners = Vec::new();
-            if game.outs == 2 {
+            if game.outs == game.scoreboard.batting_team().max_outs - 1 {
                 return PitchOutcome::Flyout {
                     fielder: fly_defender_id,
                     advancing_runners
@@ -240,7 +240,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
             }
             for baserunner in game.runners.iter() {
                 let base_from = baserunner.base;
-                let runner_id = baserunner.id.clone();
+                let runner_id = baserunner.id;
                 let runner = world.player(runner_id);
 
                 if rng.next() < formulas::flyout_advancement_threshold(runner, base_from, ruleset, multiplier_data) {
@@ -255,7 +255,7 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
 
         let ground_defender_id = game.pick_fielder(world, rng.next());
         let mut advancing_runners = Vec::new();
-        if game.outs == 2 {
+        if game.outs == game.scoreboard.batting_team().max_outs - 1 {
             return PitchOutcome::GroundOut {
                 fielder: ground_defender_id,
                 advancing_runners
@@ -265,7 +265,8 @@ fn do_pitch(world: &World, game: &Game, rng: &mut Rng) -> PitchOutcome {
         if !game.runners.empty() {
             let dp_roll = rng.next();
             if game.runners.occupied(0) {
-                if game.outs < 2 && dp_roll < formulas::double_play_threshold(batter, pitcher, out_defender, ruleset, multiplier_data) {
+                //did this actually work in actual blaseball?
+                if game.outs < game.scoreboard.batting_team().max_outs - 1 && dp_roll < formulas::double_play_threshold(batter, pitcher, out_defender, ruleset, multiplier_data) {
                     return PitchOutcome::DoublePlay {
                         runner_out: game.runners.pick_runner(rng.next())
                     };
@@ -393,7 +394,7 @@ impl Plugin for BatterStatePlugin {
 struct InningStatePlugin;
 impl Plugin for InningStatePlugin {
     fn tick(&self, game: &Game, _world: &World, _rng: &mut Rng) -> Option<Event> {
-        if game.outs < 3 {
+        if game.outs < game.scoreboard.batting_team().max_outs {
             return None;
         }
 
@@ -461,7 +462,7 @@ impl Plugin for StealingPlugin {
 }
 
 //exclusion: "all", "current", "playing"
-fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, exclusion: &str) -> Vec<Uuid> {
+fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, exclusion: &str, team: bool) -> Vec<Uuid> {
     let home_team = &game.scoreboard.home_team;
     let away_team = &game.scoreboard.away_team;
 
@@ -489,7 +490,12 @@ fn poll_for_mod(game: &Game, world: &World, a_mod: Mod, exclusion: &str) -> Vec<
 
     let mut players = vec![home_lineup, home_pitcher, away_lineup, away_pitcher].concat();
 
-    players.retain(|player| world.player(*player).mods.has(a_mod));
+    if team {
+        //todo: this crashes on a teamless player. unclear if this ever happens
+        players.retain(|player| world.team(world.player(*player).team.unwrap()).mods.has(a_mod));
+    } else {
+        players.retain(|player| world.player(*player).mods.has(a_mod));
+    }
 
     players
 }
@@ -503,7 +509,7 @@ impl Plugin for WeatherPlugin {
             Weather::Sun => None,
             Weather::Eclipse => {
                 //todo: add fortification
-                let fire_eaters = poll_for_mod(game, world, Mod::FireEater, "playing");
+                let fire_eaters = poll_for_mod(game, world, Mod::FireEater, "playing", false);
                 let incin_roll = rng.next();
                 //todo: the Fire Eater picker prioritizes unstable players
                 if fire_eaters.len() > 0 {
@@ -516,11 +522,11 @@ impl Plugin for WeatherPlugin {
                 let target = game.pick_player_weighted(world, rng.next(), |&uuid| !game.runners.contains(uuid), true);
                 let unstable_check = world.player(target).mods.has(Mod::Unstable) && incin_roll < 0.002; //estimate
                 let regular_check = incin_roll < 0.00045 - 0.0004 * fort;
-                if unstable_check || regular_check { //estimate
+                if unstable_check || regular_check {
                     if world.player(target).mods.has(Mod::Fireproof) || world.team(world.player(target).team.unwrap()).mods.has(Mod::Fireproof) {
                         return Some(Event::Fireproof { target });
                     }
-                    let minimized = poll_for_mod(game, world, Mod::Minimized, "all");
+                    let minimized = poll_for_mod(game, world, Mod::Minimized, "all", false);
                     if minimized.len() > 0 {
                         if minimized.len() > 1 { 
                             //assuming that there's
@@ -533,6 +539,8 @@ impl Plugin for WeatherPlugin {
                             }
                         }
                     }
+                    //todo: what order does ambush roll in
+                    let ambush_active: (bool, bool) = (world.team(game.scoreboard.home_team.id).mods.has(Mod::Ambush), world.team(game.scoreboard.away_team.id).mods.has(Mod::Ambush));
                     let chain: Option<Uuid> = None;
                     if unstable_check {
                         let chain_target = game.pick_player_weighted(world, rng.next(), |&uuid| world.player(uuid).team.unwrap() != world.player(target).team.unwrap(), false);
@@ -543,10 +551,15 @@ impl Plugin for WeatherPlugin {
                     } else {
                         Player::new(rng)
                     };
+                    let ambush = (
+                        if ambush_active.0 { Some(world.random_hall_player(rng)) } else { None },
+                        if ambush_active.1 { Some(world.random_hall_player(rng)) } else { None }
+                    );
                     Some(Event::Incineration { 
                         target,
                         replacement,
-                        chain
+                        chain,
+                        ambush
                     })
                 } else {
                     None
@@ -583,7 +596,7 @@ impl Plugin for WeatherPlugin {
                     return Some(Event::Birds);
                 } //todo: this is definitely not rng accurate
                 
-                let shelled_players = poll_for_mod(game, world, Mod::Shelled, "all");
+                let shelled_players = poll_for_mod(game, world, Mod::Shelled, "all", false);
                 for player in shelled_players {
                     //estimate, not sure how accurate this is
                     let shelled_roll = rng.next();
@@ -708,7 +721,7 @@ impl Plugin for WeatherPlugin {
                     0.00125 - 0.00125 * fort
                 };
                 let siphon_threshold = 0.0025;
-                let siphons = poll_for_mod(game, world, Mod::Siphon, "playing");
+                let siphons = poll_for_mod(game, world, Mod::Siphon, "playing", false);
                 let drain_roll = rng.next();
                 if drain_roll < drain_threshold || siphons.len() > 0 && drain_roll < siphon_threshold { //rulesets
                     let mut drainer: Uuid;
@@ -795,10 +808,29 @@ impl Plugin for WeatherPlugin {
                 }
             },
             Weather::BlackHole => {
-                if game.scoreboard.home_team.score > 9.99 {
-                    Some(Event::BlackHole { home_team: true })
+                if game.scoreboard.home_team.score > 9.99 { 
+                    let carcinized = if world.team(game.scoreboard.home_team.id).mods.has(Mod::Carcinization) {
+                        //this finds the max of a vec without cloning. I guess.
+                        Some(world.team(game.scoreboard.away_team.id).lineup
+                            .iter()
+                            .reduce(|acc, e| if world.player(*acc).player_rating(0) > world.player(*e).player_rating(0) { acc } else { e })
+                            .unwrap())
+                            .copied()
+                    } else {
+                        None
+                    };
+                    Some(Event::BlackHole { home_team: true, carcinized })
                 } else if game.scoreboard.away_team.score > 9.99 {
-                    Some(Event::BlackHole { home_team: false })
+                    let carcinized = if world.team(game.scoreboard.away_team.id).mods.has(Mod::Carcinization) {
+                        Some(world.team(game.scoreboard.home_team.id).lineup
+                            .iter()
+                            .reduce(|acc, e| if world.player(*acc).player_rating(0) > world.player(*e).player_rating(0) { acc } else { e })
+                            .unwrap())
+                            .copied()
+                    } else {
+                        None
+                    };
+                    Some(Event::BlackHole { home_team: false, carcinized })
                 } else {
                     None
                 }
@@ -844,7 +876,7 @@ impl Plugin for WeatherPlugin {
     }
 }
 
-fn roll_random_boosts(rng: &mut Rng, base: f64, threshold: f64, exclude_press: bool) -> Vec<f64> {
+pub fn roll_random_boosts(rng: &mut Rng, base: f64, threshold: f64, exclude_press: bool) -> Vec<f64> {
     let mut boosts: Vec<f64> = Vec::new();
     //does Tangled decrease press or cinn???
     let stat_number = if exclude_press { 25 } else { 26 };
@@ -857,9 +889,68 @@ fn roll_random_boosts(rng: &mut Rng, base: f64, threshold: f64, exclude_press: b
 struct InningEventPlugin;
 impl Plugin for InningEventPlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
-        let activated = |event: &str| game.events.has(String::from(event), 1);
+        let activated = |event: &str| game.events.has(String::from(event), -1);
         //note: inning events happen after the inning switch
         //they also happen after batter up apparently (?)
+        let home_team = world.team(game.scoreboard.home_team.id);
+        let away_team = world.team(game.scoreboard.away_team.id);
+        let undersea_home = home_team.mods.has(Mod::Undersea) && game.scoreboard.home_team.score < 0.0;
+        let undersea_away = away_team.mods.has(Mod::Undersea) && game.scoreboard.away_team.score < 0.0;
+        //todo: ok but do we REALLY have to do this. do we REALLY have to.
+        //or is the event lookup system just that broken
+        if !activated("Undersea (true)") && undersea_home {
+            return Some(Event::Undersea { home: true })
+        }
+        if !activated("Undersea (false)") && undersea_away {
+            return Some(Event::Undersea { home: false })
+        }
+
+        let overunder = poll_for_mod(game, world, Mod::OverUnder, "current", false);
+        let overunder_on: Vec<Uuid> = overunder.iter().filter(|&&p| {
+            let home = world.player(p).team.unwrap() == game.scoreboard.home_team.id;
+            let overunder_score = if home { game.scoreboard.home_team.score > 4.99 } else { game.scoreboard.away_team.score > 4.99 };
+            return !world.player(p).mods.has(Mod::Underperforming) && overunder_score;
+        }).copied().collect();
+        let overunder_off: Vec<Uuid> = overunder.iter().filter(|&&p| {
+            let home = world.player(p).team.unwrap() == game.scoreboard.home_team.id;
+            let overunder_off_score = if home { game.scoreboard.home_team.score < 4.99 } else { game.scoreboard.away_team.score < 4.99 };
+            return world.player(p).mods.has(Mod::Underperforming) && overunder_off_score;
+        }).copied().collect();
+        let underover = poll_for_mod(game, world, Mod::UnderOver, "current", false);
+        let underover_on: Vec<Uuid> = underover.iter().filter(|&&p| {
+            let home = world.player(p).team.unwrap() == game.scoreboard.home_team.id;
+            let underover_score = if home { game.scoreboard.home_team.score < 4.99 } else { game.scoreboard.away_team.score < 4.99 };
+            return !world.player(p).mods.has(Mod::Overperforming) && underover_score;
+        }).copied().collect();
+        let underover_off: Vec<Uuid> = underover.iter().filter(|&&p| {
+            let home = world.player(p).team.unwrap() == game.scoreboard.home_team.id;
+            let underover_off_score = if home { game.scoreboard.home_team.score > 4.99 } else { game.scoreboard.away_team.score > 4.99 };
+            return world.player(p).mods.has(Mod::Overperforming) && underover_off_score;
+        }).copied().collect();
+        if underover_on.len() > 0 && !game.events.has_before(String::from("UnderOver (true)"), String::from("UnderOver (false)")) {
+            return Some(Event::UnderOver { on: true, players: underover_on.clone() });
+        }
+        if underover_off.len() > 0 && game.events.has_before(String::from("UnderOver (true)"), String::from("UnderOver (false)")) {
+            return Some(Event::UnderOver { on: false, players: underover_off.clone() });
+        }
+
+        if overunder_on.len() > 0 && !game.events.has_before(String::from("OverUnder (true)"), String::from("OverUnder (false)")) {
+            return Some(Event::OverUnder { on: true, players: overunder_on.clone() });
+        }
+        else if overunder_off.len() > 0 && game.events.has_before(String::from("OverUnder (true)"), String::from("OverUnder (false)")) {
+            return Some(Event::OverUnder { on: false, players: overunder_off.clone() });
+        }
+
+        let maintenance_home = home_team.mods.has(Mod::MaintenanceMode) && game.home_impaired;
+        let maintenance_away = away_team.mods.has(Mod::MaintenanceMode) && game.away_impaired;
+        //todo: iterating through game.events is probably slower as a first option 
+        //than checking the mods and a simple condition. Measure.
+        if !activated("MaintenanceMode (true)") && maintenance_home {
+            return Some(Event::MaintenanceMode { home: true })
+        }
+        if !activated("MaintenanceMode (false)") && maintenance_away {
+            return Some(Event::MaintenanceMode { home: false })
+        }
         if !activated("TripleThreatDeactivation") && game.inning == 4 && game.scoreboard.top {
             let home_pitcher_deactivated = world.player(game.scoreboard.home_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
             let away_pitcher_deactivated = world.player(game.scoreboard.away_team.pitcher).mods.has(Mod::TripleThreat) && rng.next() < 0.333;
@@ -955,8 +1046,8 @@ impl Plugin for ModPlugin {
 struct PregamePlugin;
 impl Plugin for PregamePlugin {
     fn tick(&self, game: &Game, world: &World, rng: &mut Rng) -> Option<Event> {
+        let activated = |event: &str| game.events.has(String::from(event), -1);
         if !game.started {
-            let activated = |event: &str| game.events.has(String::from(event), -1);
             if let Weather::Coffee3 = game.weather {
                 if !activated("TripleThreat") {
                     return Some(Event::TripleThreat);
@@ -965,7 +1056,7 @@ impl Plugin for PregamePlugin {
             let mut overperforming = vec![];
             let mut underperforming = vec![];
             //todo: make this a separate event
-            let superyummy = poll_for_mod(game, world, Mod::Superyummy, "current");
+            let superyummy = poll_for_mod(game, world, Mod::Superyummy, "current", false);
             if superyummy.len() > 0 {
                 if let Weather::Peanuts = game.weather {
                     overperforming = [overperforming, superyummy].concat();
@@ -974,17 +1065,30 @@ impl Plugin for PregamePlugin {
                 }
             }
             
-            let perk = poll_for_mod(game, world, Mod::Perk, "current");
+            let perk = poll_for_mod(game, world, Mod::Perk, "current", false);
             if perk.len() > 0 {
-                if let Weather::Coffee = game.weather {
-                    overperforming = [overperforming, perk].concat();
-                } else if let Weather::Coffee2 = game.weather {
-                    overperforming = [overperforming, perk].concat();
-                } else if let Weather::Coffee3 = game.weather {
-                    overperforming = [overperforming, perk].concat();
+                match game.weather {
+                    Weather::Coffee | Weather::Coffee2 | Weather::Coffee3 => {
+                        overperforming = [overperforming, perk].concat();
+                    },
+                    _ => {}
+                }
+            }
+            
+            if game.day < 27 {
+                let earlbirds = poll_for_mod(game, world, Mod::Earlbirds, "current", true);
+                if earlbirds.len() > 0 {
+                    overperforming = [overperforming, earlbirds].concat();
                 }
             }
 
+            if game.day > 71 && game.day < 99 {
+                let lateparty = poll_for_mod(game, world, Mod::LateToTheParty, "current", true);
+                if lateparty.len() > 0 {
+                    overperforming = [overperforming, lateparty].concat();
+                }
+            }
+                
             //other performing code here
             if !activated("Performing") && (overperforming.len() > 0 || underperforming.len() > 0) {
                 Some(Event::Performing { overperforming, underperforming })

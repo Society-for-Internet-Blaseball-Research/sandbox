@@ -31,17 +31,22 @@ pub fn world(season: u8) -> World {
     return world;
 }
 
+fn get_timestamp(season: u8) -> String {
+    String::from(match season {
+        11 => "2021-03-01T15:00:00Z",
+        12 => "2021-03-08T15:00:00Z",
+        _ => todo!(),
+    })
+}
+
 //todo: unwrap -> ?, println! -> panic!
 pub fn divisions(season: u8) -> Option<ChronArray<ChronDivision>> { 
-    let timestamp = match season {
-        11 => "2021-03-01T15:00:00Z",
-        _ => todo!(),
-    };
+    let timestamp = get_timestamp(season);
     let mut result: ChronArray<ChronDivision>;
     let string = format!("json/s{}divisions.json", season);
     let path = Path::new(&string);
     let cached = path.exists();
-    let ignore_cache = false;
+    let ignore_cache = true;
     if cached && !ignore_cache {
         let file = fs::read(path);
         if file.is_err() {
@@ -76,21 +81,20 @@ pub fn divisions(season: u8) -> Option<ChronArray<ChronDivision>> {
     }
     if season == 11 {
         result.items.retain(|item| item.validTo.is_some());
+    } else {
+        result.items.retain(|item| item.data.name.contains("ild"));
     }
 
     return Some(result);
 }
 
 pub fn hall(season: u8) -> Option<ChronHall> {
-    let timestamp = match season {
-        11 => "2021-03-01T15:00:00Z",
-        _ => todo!(),
-    };
+    let timestamp = get_timestamp(season);
     let mut result: ChronArray<ChronHall>;
     let string = format!("json/s{}hall.json", season);
     let path = Path::new(&string);
     let cached = path.exists();
-    let ignore_cache = false;
+    let ignore_cache = true;
     if cached && !ignore_cache {
         let file = fs::read(path);
         if file.is_err() {
@@ -130,12 +134,10 @@ pub fn hall(season: u8) -> Option<ChronHall> {
 pub fn tiebreakers(season: u8) -> Option<Vec<Uuid>> {
     let timestamp = match season {
         11 => "2021-03-01T00:00:00Z",
+        12 => "2021-03-08T00:00:00Z",
         _ => todo!(),
     };
-    let timestamp_before = match season {
-        11 => "2021-03-01T15:00:00Z",
-        _ => todo!(),
-    };
+    let timestamp_before = get_timestamp(season);
     let mut result: ChronArray<ChronFate>;
     let string = format!("json/s{}fate.json", season);
     let path = Path::new(&string);
@@ -182,10 +184,7 @@ pub fn tiebreakers(season: u8) -> Option<Vec<Uuid>> {
 }
 
 pub fn team(id: Uuid, season: u8) -> Option<ChronTeam> {
-    let timestamp = match season {
-        11 => "2021-03-01T15:00:00Z",
-        _ => todo!(),
-    };
+    let timestamp = get_timestamp(season);
     let mut result: ChronArray<ChronTeam>;
     let string = format!("json/s{}teams_{}.json", season, id);
     let path = Path::new(&string);
@@ -227,10 +226,7 @@ pub fn team(id: Uuid, season: u8) -> Option<ChronTeam> {
 }
 
 pub fn player(id: Uuid, season: u8) -> Option<ChronPlayer> {
-    let timestamp = match season {
-        11 => "2021-03-01T15:00:00Z",
-        _ => todo!(),
-    };
+    let timestamp = get_timestamp(season);
     let mut result: ChronArray<ChronPlayer>;
     let string = format!("json/s{}players_{}.json", season, id);
     let path = Path::new(&string);
@@ -436,12 +432,13 @@ impl ChronPlayer {
         Player {
             id: self.id,
             name: self.name,
+            swept_on: if self.permAttr.contains(&String::from("ELSEWHERE")) { Some(0) } else { None },
             mods: modconvert(&[self.permAttr, self.seasAttr, self.weekAttr, self.gameAttr]),
             legendary_item: None,
             team: self.leagueTeamId,
 
             feed: Events::new(),
-            swept_on: None,
+            //can't go below 0
             scattered_letters: 0,
 
             buoyancy: self.buoyancy,

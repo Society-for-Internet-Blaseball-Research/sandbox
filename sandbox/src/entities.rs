@@ -408,6 +408,45 @@ impl Player {
             self.cinnamon += boosts[25];
         }
     }
+    pub fn player_rating(&self, category: u8) -> f64 {
+        let stats_and_pows: Vec<(f64, f64)> = match category {
+            //batting
+            0 => vec![
+                (1.0 - self.tragicness, 0.01),
+                (1.0 - self.patheticism, 0.05),
+                (self.thwackability, 0.35),
+                (self.divinity, 0.35),
+                (self.moxie, 0.075),
+                (self.musclitude, 0.075),
+                (self.martyrdom, 0.02)
+            ],
+            //pitching
+            1 => vec![
+                (self.unthwackability, 0.5),
+                (self.ruthlessness, 0.4),
+                (self.overpowerment, 0.15),
+                (self.shakespearianism, 0.1),
+                (self.coldness, 0.025)
+            ],
+            //defense
+            2 => vec![
+                (self.omniscience, 0.2),
+                (self.tenaciousness, 0.2),
+                (self.watchfulness, 0.1),
+                (self.anticapitalism, 0.1),
+                (self.chasiness, 0.1)
+            ],
+            3 => vec![
+                (self.laserlikeness, 0.5),
+                (self.base_thirst, 0.1),
+                (self.continuation, 0.1),
+                (self.ground_friction, 0.1),
+                (self.indulgence, 0.1)
+            ],
+            _ => panic!("Invalid stat category")
+        };
+        stats_and_pows.iter().fold(1.0, |acc, e| acc * e.0.powf(e.1))
+    }
     pub fn add_legendary_item(&mut self, item: LegendaryItem) {
         if let LegendaryItem::NightVisionGoggles = item {
             self.mods.add(Mod::NightVision, ModLifetime::LegendaryItem);
